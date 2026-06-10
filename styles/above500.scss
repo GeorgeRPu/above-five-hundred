@@ -3,16 +3,37 @@
 $font-family-sans-serif: "Helvetica Neue", Helvetica, Arial, sans-serif;
 $body-color: #222222;
 $link-color: #222222;
-$navbar-bg: #ffffff;
-$navbar-fg: #555555;
-$navbar-hl: #222222;
-$footer-bg: #ffffff;
+$navbar-bg: #1a1a1a;
+$navbar-fg: #d0d0d0;
+$navbar-hl: #ffffff;
+$footer-bg: #1a1a1a;
+$footer-fg: #999999;
 
 /*-- scss:rules --*/
 
 /* ==========================================================================
    Above .500 — FiveThirtyEight-inspired design system (Quarto theme)
+
+   Palette follows 538's house chart style: #008fd5 blue, #fc4f30
+   red-orange, #e5ae38 yellow, #6d904f green, #f0f0f0 panel gray.
    ========================================================================== */
+
+@font-face {
+  font-family: "Libre Franklin";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  /* path is resolved from the project root, then copied into the bundle */
+  src: url("styles/fonts/LibreFranklin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Roboto Mono";
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url("styles/fonts/RobotoMono.woff2") format("woff2");
+}
 
 :root {
   --ink: #222222;
@@ -21,47 +42,52 @@ $footer-bg: #ffffff;
   --rule: #e0e0e0;
   --rule-dark: #222222;
   --paper: #ffffff;
-  --paper-tint: #f7f7f7;
-  --accent-blue: #30a2da;
-  --accent-orange: #ed713a;
-  --accent-green: #77ab43;
-  --accent-red: #d63b3b;
-  --font-display: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
-  --font-mono: "Menlo", "Consolas", monospace;
+  --paper-tint: #f0f0f0;
+  --masthead: #1a1a1a;
+  --accent-blue: #008fd5;
+  --accent-orange: #fc4f30;
+  --accent-yellow: #e5ae38;
+  --accent-green: #6d904f;
+  --accent-red: #fc4f30;
+  --chart-gray: #8b8b8b;
+  --font-display: "Libre Franklin", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Roboto Mono", "Menlo", "Consolas", monospace;
 }
 
 /* --------------------------------------------------------------------------
-   Masthead (Quarto navbar restyled)
+   Masthead (Quarto navbar restyled): 538's black bar, white uppercase nav
    -------------------------------------------------------------------------- */
 
 .navbar {
-  border-bottom: 2px solid var(--rule-dark);
-  padding-top: 14px;
-  padding-bottom: 10px;
+  background: var(--masthead);
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 .navbar-brand {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-weight: 900;
+  font-size: 24px;
   letter-spacing: -0.5px;
   text-transform: uppercase;
-  color: var(--ink);
+  color: #ffffff;
 }
 
 .navbar-brand .brand-mark { color: var(--accent-orange); }
 
 .navbar .nav-link {
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--ink-soft);
+  letter-spacing: 1.5px;
+  color: #d0d0d0;
   border-bottom: 3px solid transparent;
 }
 
 .navbar .nav-link:hover,
 .navbar .nav-item .nav-link.active {
-  color: var(--ink);
+  color: #ffffff;
   border-bottom-color: var(--accent-orange);
 }
 
@@ -81,6 +107,7 @@ $footer-bg: #ffffff;
 
 h1.headline {
   font-family: var(--font-display);
+  font-weight: 900;
   font-size: clamp(30px, 5vw, 46px);
   line-height: 1.05;
   letter-spacing: -1px;
@@ -95,8 +122,13 @@ h1.headline {
 }
 
 .byline {
-  font-size: 13px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   color: var(--ink-faint);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 8px 0;
   margin-bottom: 28px;
 }
 
@@ -121,6 +153,7 @@ h1.headline {
 
   h2 {
     font-family: var(--font-display);
+    font-weight: 900;
     font-size: 20px;
     margin: 0;
     padding: 0;
@@ -171,9 +204,11 @@ h1.headline {
 
   h3 {
     font-family: var(--font-display);
+    font-weight: 900;
     font-size: 22px;
     margin: 6px 0 8px;
     line-height: 1.1;
+    color: var(--ink);
   }
 
   p {
@@ -266,7 +301,7 @@ table.fte {
    -------------------------------------------------------------------------- */
 
 .matchup {
-  border: 1px solid var(--rule);
+  background: var(--paper-tint); /* 538's #f0f0f0 chart-panel gray */
   padding: 14px 16px;
   margin: 0 0 14px;
 
@@ -294,12 +329,12 @@ table.fte {
   }
 
   &.loser .team-name,
-  &.loser .pct { color: var(--ink-faint); }
+  &.loser .pct { color: var(--chart-gray); }
 }
 
 .bar-track {
   height: 14px;
-  background: var(--paper-tint);
+  background: var(--paper); /* white gridline-style track on the gray panel */
   position: relative;
 }
 
@@ -368,12 +403,14 @@ table.fte {
 }
 
 .nav-footer {
-  border-top: 2px solid var(--rule-dark);
+  background: var(--masthead);
   margin-top: 64px;
+  padding-top: 20px;
+  padding-bottom: 20px;
   font-size: 13px;
-  color: var(--ink-faint);
+  color: #999999;
 
-  a { color: var(--ink-soft); }
+  a { color: #d0d0d0; }
 }
 
 @media (max-width: 640px) {

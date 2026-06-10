@@ -10,7 +10,8 @@ website:
   search: false
   navbar:
     title: "Above[.500]{.brand-mark}"
-    background: "#ffffff"
+    background: "#1a1a1a"
+    foreground: "#d0d0d0"
     left:
       - text: "Forecasts"
         href: index.qmd
@@ -30,11 +31,6 @@ format:
       body-width: 1024px
     toc: false
     anchor-sections: false
-    include-in-header:
-      text: |
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
 
 execute:
   echo: false

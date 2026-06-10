@@ -11,7 +11,7 @@ MODELS = [
         "name": "NBA Elo Forecast",
         "league": "NBA",
         "description": "Game-by-game win probabilities, power ratings and title odds.",
-        "color": "#ed713a",
+        "color": "#fc4f30",
         "href": "forecasts/nba-elo.qmd",
     },
 ]
