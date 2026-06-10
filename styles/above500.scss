@@ -1,0 +1,450 @@
+/*-- scss:defaults --*/
+
+$font-family-sans-serif: "Helvetica Neue", Helvetica, Arial, sans-serif;
+$body-color: #222222;
+$link-color: #222222;
+$navbar-bg: #ffffff;
+$navbar-fg: #555555;
+$navbar-hl: #222222;
+$footer-bg: #1a1a1a;
+$footer-fg: #999999;
+
+/*-- scss:rules --*/
+
+/* ==========================================================================
+   Above .500 — FiveThirtyEight-inspired design system (Quarto theme)
+
+   Palette follows 538's house chart style: #008fd5 blue, #fc4f30
+   red-orange, #e5ae38 yellow, #6d904f green, #f0f0f0 panel gray.
+   ========================================================================== */
+
+@font-face {
+  font-family: "Libre Franklin";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  /* path is resolved from the project root, then copied into the bundle */
+  src: url("styles/fonts/LibreFranklin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Roboto Mono";
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url("styles/fonts/RobotoMono.woff2") format("woff2");
+}
+
+:root {
+  --ink: #222222;
+  --ink-soft: #555555;
+  --ink-faint: #999999;
+  --rule: #e0e0e0;
+  --rule-dark: #222222;
+  --paper: #ffffff;
+  --paper-tint: #f0f0f0;
+  --masthead: #1a1a1a;
+  --accent-blue: #008fd5;
+  --accent-orange: #fc4f30;
+  --accent-yellow: #e5ae38;
+  --accent-green: #6d904f;
+  --accent-red: #fc4f30;
+  --chart-gray: #8b8b8b;
+  --font-display: "Libre Franklin", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "Roboto Mono", "Menlo", "Consolas", monospace;
+}
+
+/* --------------------------------------------------------------------------
+   Masthead (Quarto navbar restyled), per the real fivethirtyeight.com:
+   white header, typewriter-mono wordmark, plain title-case nav, hairline
+   -------------------------------------------------------------------------- */
+
+.navbar {
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  padding-top: 16px;
+  padding-bottom: 8px;
+}
+
+.navbar-brand {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+}
+
+.navbar-brand .brand-mark { color: var(--ink); }
+
+.navbar .nav-link {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-item .nav-link.active {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   Page headers
+   -------------------------------------------------------------------------- */
+
+.kicker {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--ink-soft);
+  margin: 28px 0 6px;
+}
+
+h1.headline {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(30px, 5vw, 46px);
+  line-height: 1.05;
+  letter-spacing: -1px;
+  margin: 0 0 10px;
+}
+
+.dek {
+  font-size: 18px;
+  color: var(--ink-soft);
+  max-width: 680px;
+  margin: 0 0 8px;
+}
+
+.byline {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-faint);
+  margin-bottom: 28px;
+}
+
+.byline strong { color: var(--ink-soft); font-weight: 400; }
+
+.updated-stamp {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+/* --------------------------------------------------------------------------
+   Section headers
+   -------------------------------------------------------------------------- */
+
+/* 538 column headers: small gray mono caps over a hairline ("THE LATEST") */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-top: 1px solid var(--rule-dark);
+  margin: 40px 0 0;
+  padding-top: 8px;
+
+  h2 {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .note {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Model index (home page) — data.fivethirtyeight.com-style ruled list
+   -------------------------------------------------------------------------- */
+
+.model-index {
+  margin: 0 0 56px;
+}
+
+.index-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 4px;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+
+  &:hover { background: var(--paper-tint); }
+  &:hover h3 { text-decoration: underline; }
+
+  .league {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ink-soft);
+  }
+
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 20px;
+    margin: 2px 0 4px;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+
+  p {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+}
+
+.index-side {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: none;
+}
+
+.index-updated {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* 538's small bordered buttons ("All stories", "See all NBA teams…") */
+.btn-outline {
+  flex: none;
+  display: inline-block;
+  border: 1px solid #cccccc;
+  background: var(--paper);
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.index-row:hover .btn-outline { border-color: var(--ink-faint); }
+
+@media (max-width: 640px) {
+  .index-row { flex-wrap: wrap; }
+  .index-updated { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Forecast tables
+   -------------------------------------------------------------------------- */
+
+table.fte {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 0 0 8px;
+
+  thead th {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ink-soft);
+    text-align: right;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--rule-dark);
+    white-space: nowrap;
+  }
+
+  thead th.l { text-align: left; }
+
+  tbody td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--rule);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  tbody td.l { text-align: left; white-space: normal; }
+  tbody tr:hover { background: var(--paper-tint); }
+
+  .num { font-family: var(--font-mono); font-size: 13px; }
+
+  td.prob {
+    font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+}
+
+.team-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.team-dot {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.team-name { font-weight: 700; }
+.team-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+/* --------------------------------------------------------------------------
+   Matchup cards
+   -------------------------------------------------------------------------- */
+
+.matchup {
+  background: var(--paper-tint); /* 538's #f0f0f0 chart-panel gray */
+  padding: 14px 16px;
+  margin: 0 0 14px;
+
+  .matchup-date {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ink-faint);
+    margin-bottom: 10px;
+  }
+}
+
+.matchup-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) 64px minmax(120px, 220px);
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+
+  .pct {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 15px;
+    text-align: right;
+  }
+
+  &.loser .team-name,
+  &.loser .pct { color: var(--chart-gray); }
+}
+
+.bar-track {
+  height: 14px;
+  background: var(--paper); /* white gridline-style track on the gray panel */
+  position: relative;
+}
+
+.bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent-blue);
+}
+
+.score {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 16px;
+  text-align: right;
+}
+
+.final-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--ink);
+  padding: 2px 6px;
+  margin-left: 8px;
+  vertical-align: 1px;
+}
+
+/* --------------------------------------------------------------------------
+   Sparklines
+   -------------------------------------------------------------------------- */
+
+.spark { display: block; }
+
+.spark polyline {
+  fill: none;
+  stroke: var(--accent-blue);
+  stroke-width: 1.5;
+}
+
+.spark .spark-dot { fill: var(--accent-orange); }
+
+/* --------------------------------------------------------------------------
+   Methodology box & footer
+   -------------------------------------------------------------------------- */
+
+.methodology {
+  background: var(--paper-tint);
+  border-left: 4px solid var(--accent-blue);
+  padding: 16px 20px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin: 32px 0;
+
+  h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ink);
+    font-family: var(--font-family-sans-serif);
+  }
+
+  p { margin: 0; }
+}
+
+.nav-footer {
+  background: var(--masthead);
+  margin-top: 64px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  font-size: 13px;
+  color: #999999;
+
+  a { color: #d0d0d0; }
+}
+
+@media (max-width: 640px) {
+  .matchup-row { grid-template-columns: 1fr 56px 90px; }
+  table.fte { font-size: 13px; }
+  table.fte .hide-sm { display: none; }
+}

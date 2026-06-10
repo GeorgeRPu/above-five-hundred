@@ -1,0 +1,39 @@
+---
+pagetitle: "Methodology | Above .500"
+---
+
+```{=html}
+<span class="kicker">About</span>
+<h1 class="headline">How these forecasts work</h1>
+<p class="dek">Every number on this site is produced by an open statistical
+model that runs when the site is built. No black boxes, no stale data.</p>
+
+<div class="section-head"><h2>The pipeline</h2></div>
+```
+
+Each model lives in the `above500` Python package and exposes a `forecast()`
+function. The pages on this site are [Quarto](https://quarto.org) documents:
+when the site is rendered, each page imports its model, runs it, and writes
+the tables, win-probability bars and sparklines you see. A scheduled build
+re-renders the site daily, so forecasts refresh without anyone committing
+data files.
+
+```{=html}
+<div class="section-head"><h2>Reading the numbers</h2></div>
+```
+
+**Ratings** are Elo-style power scores: the gap between two teams' ratings
+maps to a win probability for a game between them, with an adjustment for
+home advantage. **Playoff and title odds** come from Monte Carlo simulation —
+the model plays out the rest of the season thousands of times and counts how
+often each outcome occurs. Probabilities are estimates, not promises: a 75%
+favorite should lose one time in four.
+
+```{=html}
+<div class="section-head"><h2>Publishing your own model</h2></div>
+```
+
+Add a module to the `above500` package that returns the standard forecast
+payload, register it in `above500.MODELS`, and create a page under
+`forecasts/` that renders it — the existing `nba-elo.qmd` is a complete
+working example. The payload schema is documented in the repository README.
