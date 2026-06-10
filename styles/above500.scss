@@ -3,9 +3,9 @@
 $font-family-sans-serif: "Helvetica Neue", Helvetica, Arial, sans-serif;
 $body-color: #222222;
 $link-color: #222222;
-$navbar-bg: #1a1a1a;
-$navbar-fg: #d0d0d0;
-$navbar-hl: #ffffff;
+$navbar-bg: #ffffff;
+$navbar-fg: #555555;
+$navbar-hl: #222222;
 $footer-bg: #1a1a1a;
 $footer-fg: #999999;
 
@@ -55,13 +55,17 @@ $footer-fg: #999999;
 }
 
 /* --------------------------------------------------------------------------
-   Masthead (Quarto navbar restyled): 538's black bar, white uppercase nav
+   Masthead (Quarto navbar restyled): 538's white header — black wordmark,
+   gray uppercase nav, hairline rule — under a slim black utility strip
    -------------------------------------------------------------------------- */
 
+body { border-top: 6px solid var(--masthead); }
+
 .navbar {
-  background: var(--masthead);
-  padding-top: 12px;
-  padding-bottom: 12px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  padding-top: 14px;
+  padding-bottom: 10px;
 }
 
 .navbar-brand {
@@ -70,7 +74,7 @@ $footer-fg: #999999;
   font-size: 24px;
   letter-spacing: -0.5px;
   text-transform: uppercase;
-  color: #ffffff;
+  color: var(--ink);
 }
 
 .navbar-brand .brand-mark { color: var(--accent-orange); }
@@ -81,13 +85,13 @@ $footer-fg: #999999;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  color: #d0d0d0;
+  color: var(--ink-soft);
   border-bottom: 3px solid transparent;
 }
 
 .navbar .nav-link:hover,
 .navbar .nav-item .nav-link.active {
-  color: #ffffff;
+  color: var(--ink);
   border-bottom-color: var(--accent-orange);
 }
 

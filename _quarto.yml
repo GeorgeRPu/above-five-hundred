@@ -10,8 +10,8 @@ website:
   search: false
   navbar:
     title: "Above[.500]{.brand-mark}"
-    background: "#1a1a1a"
-    foreground: "#d0d0d0"
+    background: "#ffffff"
+    foreground: "#555555"
     left:
       - text: "Forecasts"
         href: index.qmd
