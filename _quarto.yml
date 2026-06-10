@@ -1,0 +1,42 @@
+project:
+  type: website
+  output-dir: _site
+  execute-dir: project
+
+website:
+  title: "Above .500"
+  description: "Data-driven sports forecasts: win probabilities, power ratings and playoff odds from original statistical models."
+  site-url: https://georgerpu.github.io/above-five-hundred
+  search: false
+  navbar:
+    title: "Above[.500]{.brand-mark}"
+    background: "#ffffff"
+    left:
+      - text: "Forecasts"
+        href: index.qmd
+      - text: "Methodology"
+        href: about.qmd
+      - text: "GitHub"
+        href: https://github.com/GeorgeRPu/above-five-hundred
+  page-footer:
+    left: "Above .500 — a FiveThirtyEight-style home for original sports models."
+    right: "[Source & data on GitHub](https://github.com/GeorgeRPu/above-five-hundred)"
+
+format:
+  html:
+    theme: [default, styles/above500.scss]
+    page-layout: article
+    grid:
+      body-width: 1024px
+    toc: false
+    anchor-sections: false
+    include-in-header:
+      text: |
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+
+execute:
+  echo: false
+  warning: false
+  freeze: false

@@ -1,0 +1,32 @@
+---
+pagetitle: "NBA Elo Forecast | Above .500"
+---
+
+```{python}
+#| output: asis
+from above500 import nba_elo, render
+from html import escape
+
+f = nba_elo.forecast()
+
+print(f'<span class="kicker">{escape(f["league"])}</span>')
+print(f'<h1 class="headline">{escape(f["name"])}</h1>')
+print(f'<p class="dek">{escape(f["description"])}</p>')
+print(render.byline(f))
+```
+
+```{python}
+#| output: asis
+print(render.games_section(f, "upcoming", "Upcoming games", "Win probabilities"))
+```
+
+```{python}
+#| output: asis
+print(render.games_section(f, "final", "Recent results", "Model probability vs. outcome"))
+```
+
+```{python}
+#| output: asis
+print(render.standings_table(f))
+print(render.methodology_box(f))
+```

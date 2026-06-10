@@ -1,35 +1,34 @@
 # Above .500
 
 A FiveThirtyEight-style home for my own sports models: win probabilities,
-power ratings, playoff and title odds — published as plain JSON and rendered
-by a fully static site.
+power ratings, playoff and title odds — built with [Quarto](https://quarto.org),
+with every model re-run at render time.
 
 ## How it works
 
 ```
-your model (Python, R, anything)
-        │  writes JSON
+above500/<model>.py          your model: exposes forecast() -> dict
+        │  imported & run at render time
         ▼
-site/data/<model-slug>/latest.json     ← one file per model
-site/data/models.json                  ← registry shown on the home page
-        │  fetched in the browser
+forecasts/<model>.qmd        Quarto page: Python cells render HTML
+        │  quarto render
         ▼
-site/index.html · forecast.html        ← static pages, no build step
+_site/                       static site, deployed to GitHub Pages
 ```
 
-The site has no build step and no dependencies. Push new JSON, and the
-forecast updates. A GitHub Actions workflow deploys `site/` to GitHub Pages
-on every push to `main`.
+There is no committed data. Pages execute their models when the site is
+rendered, and a scheduled GitHub Action re-renders daily (10:30 UTC), so
+forecasts refresh automatically — push model code, not JSON.
 
 ## Quick start
 
 ```bash
-# Generate the sample NBA Elo forecast (demo of the full pipeline)
-python3 scripts/generate_sample_data.py
+# Quarto CLI: https://quarto.org/docs/get-started/
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 
-# Preview locally
-cd site && python3 -m http.server 8000
-# open http://localhost:8000
+quarto preview        # live-reloading local preview
+quarto render         # full build into _site/
 ```
 
 To publish, enable GitHub Pages for this repository (Settings → Pages →
@@ -37,53 +36,34 @@ Source: **GitHub Actions**) and push to `main`.
 
 ## Publishing a model
 
-1. Have your model write `site/data/<slug>/latest.json` (schema below).
-2. Add the model to `site/data/models.json`.
-3. Commit and push. The model card appears on the home page and its
-   forecast renders at `forecast.html?model=<slug>`.
+1. Add a module to the `above500` package exposing `forecast()` that
+   returns the payload below.
+2. Register it in `above500.MODELS` (slug, name, league, card text, page).
+3. Add a page under `forecasts/` that renders it — copy
+   `forecasts/nba-elo.qmd`, which is a complete working example (Elo
+   ratings plus Monte Carlo playoff odds).
 
-`scripts/generate_sample_data.py` is a complete working example (Elo
-ratings plus Monte Carlo playoff odds).
+### Forecast payload
 
-### Registry — `site/data/models.json`
-
-```json
-{
-  "models": [
-    {
-      "slug": "nba-elo",
-      "name": "NBA Elo Forecast",
-      "league": "NBA",
-      "season": "2025-26 season",
-      "description": "Shown on the model card.",
-      "color": "#ed713a",
-      "updated": "2026-06-10T21:00:00Z"
-    }
-  ]
-}
-```
-
-### Forecast — `site/data/<slug>/latest.json`
-
-```json
+```python
 {
   "slug": "nba-elo",
   "name": "NBA Elo Forecast",
   "league": "NBA",
   "season": "2025-26 season",
-  "updated": "2026-06-10T21:00:00Z",
+  "updated": "2026-06-10T21:00:00Z",        # ISO 8601 UTC
   "description": "Dek shown under the headline.",
   "methodology": "Optional 'How this works' box.",
 
   "games": [
     {
       "date": "2026-06-11",
-      "status": "upcoming",            // or "final"
-      "home": { "abbr": "MIL", "name": "Bucks", "color": "#00471b",
-                "rating": 1583, "win_prob": 0.715, "score": null },
-      "away": { "abbr": "LAL", "name": "Lakers", "color": "#552583",
-                "rating": 1493, "win_prob": 0.285, "score": null }
-    }
+      "status": "upcoming",                  # or "final"
+      "home": {"abbr": "MIL", "name": "Bucks", "color": "#00471b",
+               "rating": 1583, "win_prob": 0.715, "score": None},
+      "away": {"abbr": "LAL", "name": "Lakers", "color": "#552583",
+               "rating": 1493, "win_prob": 0.285, "score": None},
+    },
   ],
 
   "standings": [
@@ -94,14 +74,13 @@ ratings plus Monte Carlo playoff odds).
       "record": "91-29",
       "playoff_prob": 1.0,
       "title_prob": 0.34,
-      "history": [1500, 1512.3, 1538.9]   // sparkline series
-    }
+      "history": [1500, 1512.3, 1538.9],     # sparkline series
+    },
   ],
 
-  "column_labels": {                       // optional, per-sport overrides
-    "rating": "Rating", "record": "Record",
-    "playoff_prob": "Make playoffs", "title_prob": "Win title"
-  }
+  # optional, per-sport column header overrides
+  "column_labels": {"rating": "Rating", "record": "Record",
+                    "playoff_prob": "Make playoffs", "title_prob": "Win title"},
 }
 ```
 
@@ -112,18 +91,19 @@ Notes:
 - Every section is optional — a model with only `standings` (or only
   `games`) renders fine.
 - Probabilities are fractions in `[0, 1]`; the table shades cells by value.
+- Helpers in `above500.render` turn the payload into HTML
+  (`games_section`, `standings_table`, `byline`, `model_card`, …).
 
 ## Layout
 
 ```
-site/                  static site (deployed as-is)
-  index.html           home: model cards
-  forecast.html        one model's forecast (?model=<slug>)
-  about.html           methodology
-  css/style.css        538-inspired design system
-  js/                  vanilla JS rendering (no framework)
-  data/                model outputs (JSON)
-scripts/
-  generate_sample_data.py   sample Elo model + publishing example
-.github/workflows/deploy.yml  GitHub Pages deploy
+_quarto.yml              site config (nav, theme, execution)
+index.qmd                home: model cards
+about.qmd                methodology
+forecasts/nba-elo.qmd    one page per model
+above500/                Python package: models + HTML renderers
+  nba_elo.py             sample Elo model with Monte Carlo odds
+  render.py              payload -> HTML (tables, matchups, sparklines)
+styles/above500.scss     538-inspired Quarto theme
+.github/workflows/deploy.yml   render + deploy, nightly cron
 ```
