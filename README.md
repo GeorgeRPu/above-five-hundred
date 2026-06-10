@@ -92,7 +92,7 @@ Notes:
   `games`) renders fine.
 - Probabilities are fractions in `[0, 1]`; the table shades cells by value.
 - Helpers in `above500.render` turn the payload into HTML
-  (`games_section`, `standings_table`, `byline`, `model_card`, …).
+  (`games_section`, `standings_table`, `byline`, `model_row`, …).
 
 ## Layout
 

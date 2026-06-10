@@ -220,16 +220,21 @@ def methodology_box(forecast: dict) -> str:
     )
 
 
-def model_card(model: dict, updated: str | None = None) -> str:
+def model_row(model: dict, updated: str | None = None, season: str | None = None) -> str:
+    """One row of the home-page index, data.fivethirtyeight.com style."""
     accent = model.get("color") or accent_for(model.get("league") or model["slug"])
     href = model["href"].replace(".qmd", ".html")
-    meta_right = f"Updated {fmt_updated(updated)}" if updated else ""
+    meta = " · ".join(x for x in (season, f"Updated {fmt_updated(updated)}" if updated else None) if x)
     return (
-        f'<a class="model-card" href="{href}" style="--card-accent:{accent}">'
-        f'<span class="league">{escape(model.get("league", ""))}</span>'
+        f'<a class="index-row" href="{href}">'
+        f'<div class="index-main">'
+        f'<span class="league" style="color:{accent}">{escape(model.get("league", ""))}</span>'
         f'<h3>{escape(model["name"])}</h3>'
         f'<p>{escape(model.get("description", ""))}</p>'
-        f'<div class="meta"><span>{escape(model.get("season", ""))}</span>'
-        f"<span>{meta_right}</span></div>"
+        f"</div>"
+        f'<div class="index-side">'
+        f'<span class="index-updated">{escape(meta)}</span>'
+        f'<span class="go-arrow" style="background:{accent}">&#8594;</span>'
+        f"</div>"
         f"</a>"
     )
