@@ -55,44 +55,38 @@ $footer-fg: #999999;
 }
 
 /* --------------------------------------------------------------------------
-   Masthead (Quarto navbar restyled): 538's white header — black wordmark,
-   gray uppercase nav, hairline rule — under a slim black utility strip
+   Masthead (Quarto navbar restyled), per the real fivethirtyeight.com:
+   white header, typewriter-mono wordmark, plain title-case nav, hairline
    -------------------------------------------------------------------------- */
-
-body { border-top: 6px solid var(--masthead); }
 
 .navbar {
   background: var(--paper);
   border-bottom: 1px solid var(--rule);
-  padding-top: 14px;
-  padding-bottom: 10px;
+  padding-top: 16px;
+  padding-bottom: 8px;
 }
 
 .navbar-brand {
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 24px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 22px;
   letter-spacing: -0.5px;
-  text-transform: uppercase;
   color: var(--ink);
 }
 
-.navbar-brand .brand-mark { color: var(--accent-orange); }
+.navbar-brand .brand-mark { color: var(--ink); }
 
 .navbar .nav-link {
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--ink-soft);
-  border-bottom: 3px solid transparent;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink);
 }
 
 .navbar .nav-link:hover,
 .navbar .nav-item .nav-link.active {
   color: var(--ink);
-  border-bottom-color: var(--accent-orange);
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 /* --------------------------------------------------------------------------
@@ -101,11 +95,12 @@ body { border-top: 6px solid var(--masthead); }
 
 .kicker {
   display: inline-block;
-  font-size: 12px;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--accent-orange);
+  letter-spacing: 1.5px;
+  color: var(--ink-soft);
   margin: 28px 0 6px;
 }
 
@@ -126,19 +121,18 @@ h1.headline {
 }
 
 .byline {
+  font-family: var(--font-mono);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--ink-faint);
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
-  padding: 8px 0;
   margin-bottom: 28px;
 }
 
-.byline strong { color: var(--ink-soft); }
+.byline strong { color: var(--ink-soft); font-weight: 400; }
 
 .updated-stamp {
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--ink-faint);
 }
@@ -147,26 +141,30 @@ h1.headline {
    Section headers
    -------------------------------------------------------------------------- */
 
+/* 538 column headers: small gray mono caps over a hairline ("THE LATEST") */
 .section-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  border-bottom: 2px solid var(--rule-dark);
+  border-top: 1px solid var(--rule-dark);
   margin: 40px 0 0;
-  padding-bottom: 6px;
+  padding-top: 8px;
 
   h2 {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: 20px;
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 12px;
+    letter-spacing: 1.5px;
     margin: 0;
     padding: 0;
     border: none;
     text-transform: uppercase;
+    color: var(--ink);
   }
 
   .note {
-    font-size: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
     color: var(--ink-faint);
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -194,10 +192,12 @@ h1.headline {
   &:hover h3 { text-decoration: underline; }
 
   .league {
+    font-family: var(--font-mono);
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
+    color: var(--ink-soft);
   }
 
   h3 {
@@ -232,18 +232,20 @@ h1.headline {
   white-space: nowrap;
 }
 
-.go-arrow {
+/* 538's small bordered buttons ("All stories", "See all NBA teams…") */
+.btn-outline {
   flex: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 700;
+  display: inline-block;
+  border: 1px solid #cccccc;
+  background: var(--paper);
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink);
+  white-space: nowrap;
 }
+
+.index-row:hover .btn-outline { border-color: var(--ink-faint); }
 
 @media (max-width: 640px) {
   .index-row { flex-wrap: wrap; }
@@ -261,8 +263,9 @@ table.fte {
   margin: 0 0 8px;
 
   thead th {
-    font-size: 11px;
-    font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--ink-soft);
@@ -316,7 +319,11 @@ table.fte {
 }
 
 .team-name { font-weight: 700; }
-.team-sub { font-size: 12px; color: var(--ink-faint); }
+.team-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
 
 /* --------------------------------------------------------------------------
    Matchup cards
@@ -328,9 +335,10 @@ table.fte {
   margin: 0 0 14px;
 
   .matchup-date {
+    font-family: var(--font-mono);
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     color: var(--ink-faint);
     margin-bottom: 10px;
   }

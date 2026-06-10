@@ -9,7 +9,7 @@ website:
   site-url: https://georgerpu.github.io/above-five-hundred
   search: false
   navbar:
-    title: "Above[.500]{.brand-mark}"
+    title: "Above .500"
     background: "#ffffff"
     foreground: "#555555"
     left:
