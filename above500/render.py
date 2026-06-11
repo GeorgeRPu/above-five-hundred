@@ -245,7 +245,8 @@ def backtest_models_table(backtest: dict) -> str:
         + "</tbody></table>"
         + '<p class="table-note">Accuracy is the share of games where the favorite won. '
         + "Brier score and log loss measure probability quality; lower is better. A coin "
-        + "flip has a Brier score of 0.2500.</p>"
+        + "flip has a Brier score of 0.2500. The reference Elo is scored only on games "
+        + "where it published a forecast.</p>"
     )
 
 

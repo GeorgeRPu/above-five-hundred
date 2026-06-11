@@ -22,11 +22,14 @@ from __future__ import annotations
 import csv
 import gzip
 import io
+import json
 import math
 import os
 import time
+import urllib.error
+import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
@@ -34,6 +37,14 @@ DATA = Path(__file__).resolve().parent / "data" / "nba_games.csv.gz"
 LIVE_URL = "https://raw.githubusercontent.com/Neil-Paine-1/NBA-elo/main/nba_elo.csv"
 LIVE_CACHE = Path(os.environ.get("TMPDIR", "/tmp")) / "above500_nba_elo_remote.csv"
 LIVE_CACHE_MAX_AGE = 12 * 3600  # seconds
+
+# balldontlie.io tops up games newer than every other source. Requires an
+# API key in BALLDONTLIE_API_KEY (set as a GitHub Actions secret in CI);
+# without one this source is skipped silently.
+BDL_URLS = ("https://api.balldontlie.io/nba/v1/games",
+            "https://api.balldontlie.io/v1/games")
+BDL_CACHE = Path(os.environ.get("TMPDIR", "/tmp")) / "above500_bdl_games.json"
+BDL_MAX_REQUESTS = 60
 
 INITIAL_RATING = 1300.0
 MEAN_RATING = 1505.0
@@ -73,6 +84,12 @@ ABBR_TO_FRANCHISE = {
     "POR": "Trailblazers", "SAC": "Kings", "SAS": "Spurs",
     "TOR": "Raptors", "UTA": "Jazz", "WAS": "Wizards",
 }
+
+# balldontlie uses the NBA's own abbreviations where they differ
+BDL_ABBR_TO_FRANCHISE = dict(ABBR_TO_FRANCHISE,
+                             BKN="Nets", CHA="Hornets", PHX="Suns")
+for _bref_only in ("BRK", "CHO", "PHO"):
+    del BDL_ABBR_TO_FRANCHISE[_bref_only]
 
 
 def elo_win_prob(diff: float) -> float:
@@ -139,10 +156,94 @@ def _fetch_live_games(after_date: str) -> list[dict]:
     return games
 
 
+def _parse_bdl_games(payloads: list[dict]) -> list[dict]:
+    """Convert balldontlie /games pages to our row format (finished games only)."""
+    games = []
+    for payload in payloads:
+        for g in payload.get("data", []):
+            if g.get("status") != "Final":
+                continue
+            home = BDL_ABBR_TO_FRANCHISE.get(g["home_team"]["abbreviation"])
+            away = BDL_ABBR_TO_FRANCHISE.get(g["visitor_team"]["abbreviation"])
+            if not home or not away:
+                continue
+            games.append({
+                "season": int(g["season"]) + 1,   # bdl 2025 == our 2026 (2025-26)
+                "date": g["date"],
+                "playoffs": bool(g.get("postseason")),
+                "home": home,
+                "away": away,
+                "home_pts": int(g["home_team_score"]),
+                "away_pts": int(g["visitor_team_score"]),
+                # the NBA Cup final is played on a neutral court
+                "neutral": g.get("ist_stage") == "Championship",
+                "p_ref_home": None,
+            })
+    games.sort(key=lambda g: (g["date"], g["home"]))
+    return games
+
+
+def _fetch_bdl_games(after_date: str) -> list[dict]:
+    """Games newer than `after_date` from balldontlie. Empty list on any failure."""
+    api_key = os.environ.get("BALLDONTLIE_API_KEY", "").strip()
+    if not api_key:
+        return []
+
+    if BDL_CACHE.exists() and time.time() - BDL_CACHE.stat().st_mtime < LIVE_CACHE_MAX_AGE:
+        try:
+            cached = json.loads(BDL_CACHE.read_text())
+            return [g for g in cached if g["date"] > after_date]
+        except Exception:
+            pass
+
+    start = (datetime.strptime(after_date, "%Y-%m-%d") + timedelta(days=1)).date()
+    end = datetime.now(timezone.utc).date()
+    payloads, requests_made = [], 0
+
+    for base_url in BDL_URLS:
+        payloads.clear()
+        cursor = None
+        try:
+            while requests_made < BDL_MAX_REQUESTS:
+                params = {"start_date": start.isoformat(), "end_date": end.isoformat(),
+                          "per_page": "100"}
+                if cursor is not None:
+                    params["cursor"] = str(cursor)
+                req = urllib.request.Request(
+                    f"{base_url}?{urllib.parse.urlencode(params)}",
+                    headers={"Authorization": api_key},
+                )
+                requests_made += 1
+                try:
+                    with urllib.request.urlopen(req, timeout=60) as resp:
+                        payload = json.loads(resp.read())
+                except urllib.error.HTTPError as e:
+                    if e.code == 429:  # rate limited: wait and retry the same page
+                        time.sleep(int(e.headers.get("Retry-After", 15)))
+                        requests_made -= 1
+                        continue
+                    raise
+                payloads.append(payload)
+                cursor = (payload.get("meta") or {}).get("next_cursor")
+                if cursor is None:
+                    games = _parse_bdl_games(payloads)
+                    try:
+                        BDL_CACHE.write_text(json.dumps(games))
+                    except Exception:
+                        pass
+                    return games
+                time.sleep(0.5)
+            return []  # page cap hit: treat as failure rather than half a season
+        except Exception:
+            continue  # try the legacy URL
+    return []
+
+
 def _load_games() -> list[dict]:
     with gzip.open(DATA, "rt", newline="") as f:
         games = [_parse_archive_row(r) for r in csv.DictReader(f)]
     games += _fetch_live_games(after_date=games[-1]["date"])
+    games += _fetch_bdl_games(after_date=games[-1]["date"])
     return games
 
 
@@ -228,7 +329,8 @@ def _score(pairs: list[tuple[float, bool]]) -> dict:
 
 def _backtest(predictions) -> dict:
     ours = [(p, won) for _, p, won, _ in predictions]
-    ref = [(p, won) for _, _, won, p in predictions]
+    # the reference Elo is scored only on games where it published a forecast
+    ref = [(p, won) for _, _, won, p in predictions if p is not None]
     home_rate = sum(won for _, won in ours) / len(ours)
     naive = [(home_rate, won) for _, won in ours]
     coin = [(0.5, won) for _, won in ours]
@@ -320,8 +422,9 @@ def forecast() -> dict:
                        "ratings with K=20 scaled by a margin-of-victory multiplier. Every "
                        "prediction in the backtest uses only information available before "
                        "tip-off. Game data: FiveThirtyEight's nbaallelo dataset (CC BY "
-                       "4.0) through 2014-15, continued for later seasons by Neil Paine's "
-                       "maintained NBA-elo dataset.",
+                       "4.0) through 2014-15, continued by Neil Paine's maintained "
+                       "NBA-elo dataset, topped up with the latest results from the "
+                       "balldontlie API.",
         "games": [
             {**g, "home": team_blob(g["home"]), "away": team_blob(g["away"])}
             for g in run["last_games"]
