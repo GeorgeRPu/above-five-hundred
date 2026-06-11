@@ -119,18 +119,43 @@ fetches any games newer than the archive from Paine's repo (falling
 back to the archive if offline), so the nightly build keeps ratings as
 current as the upstream data allows.
 
+### 2026 World Cup Forecast (`above500/wc_elo.py`)
+
+National-team Elo ratings computed from 49,000+ men's internationals
+since 1872 (World Football Elo conventions: importance-weighted K,
+goal-difference multiplier, +100 home advantage at non-neutral venues).
+Win/draw/loss probabilities come from a two-parameter Poisson goal
+model fitted to the rating gap; backtested on ~30,000 matches since
+1994 (58.9% three-way accuracy, 0.527 multiclass Brier vs 0.631 for
+base rates).
+
+Tournament odds come from 10,000 Monte Carlo runs of the real 2026
+bracket: the actual group fixtures (groups are derived from the fixture
+graph and match the official draw), points/GD/GF ranking, twelve
+winners + twelve runners-up + eight best thirds, and the official
+round-of-32 structure with third-place slots randomized within FIFA's
+allocation rules. Completed matches enter the simulation as fixed
+results, so odds sharpen as the tournament is played.
+
+**Data**: [martj42/international_results](https://github.com/martj42/international_results)
+(CC0), updated daily, re-fetched at render time with the committed
+archive as offline fallback.
+
 ## Layout
 
 ```
 _quarto.yml              site config (nav, theme, execution)
 index.qmd                home: model index
 about.qmd                methodology
-forecasts/nba-elo.qmd    one page per model
+forecasts/                one page per model
+  nba-elo.qmd
+  world-cup-2026.qmd
 above500/                Python package: models + HTML renderers
-  nba_elo.py             NBA Elo ratings + 1955-2015 backtest
+  nba_elo.py             NBA Elo ratings + 1955+ backtest
+  wc_elo.py              international football Elo + World Cup sim
   render.py              payload -> HTML (tables, matchups, sparklines)
-  data/nba_games.csv.gz  historical game results (CC BY 4.0, 538)
-scripts/prepare_nba_data.py    regenerates the game archive
+  data/                  committed data archives (CC BY 4.0 / CC0)
+scripts/                 regenerate the data archives
 styles/above500.scss     538-inspired Quarto theme
 .github/workflows/deploy.yml   render + deploy, nightly cron
 ```

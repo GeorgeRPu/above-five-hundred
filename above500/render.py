@@ -218,6 +218,79 @@ def standings_table(forecast: dict) -> str:
     )
 
 
+def odds_table(rows: list[dict], columns: list[dict], title: str, note: str = "",
+               sort_key: str | None = None) -> str:
+    """Generic ratings/odds table. Column kinds: team, num, text, spark, prob."""
+    if sort_key:
+        rows = sorted(rows, key=lambda r: r.get(sort_key) or 0, reverse=True)
+
+    head = []
+    for c in columns:
+        cls = ' class="l"' if c["kind"] == "team" else (
+            ' class="hide-sm"' if c.get("hide_sm") else "")
+        head.append(f'<th{cls}>{escape(c["label"])}</th>')
+
+    body = []
+    for r in rows:
+        cells = []
+        for c in columns:
+            v = r.get(c["key"])
+            if c["kind"] == "team":
+                cells.append(f'<td class="l">{team_cell(r, sub=r.get("sub"))}</td>')
+            elif c["kind"] == "prob":
+                cells.append(_prob_td(v))
+            elif c["kind"] == "spark":
+                hide = " hide-sm" if c.get("hide_sm") else ""
+                cells.append(f'<td class="{hide}">{sparkline(v or [])}</td>')
+            elif c["kind"] == "num":
+                hide = " hide-sm" if c.get("hide_sm") else ""
+                cells.append(f'<td class="num{hide}">'
+                             f'{round(v) if v is not None else "—"}</td>')
+            else:
+                hide = " hide-sm" if c.get("hide_sm") else ""
+                cells.append(f'<td class="num{hide}">{escape(str(v or "—"))}</td>')
+        body.append("<tr>" + "".join(cells) + "</tr>")
+
+    return (
+        section_head(title, note)
+        + '<table class="fte"><thead><tr>'
+        + "".join(head)
+        + "</tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table>"
+    )
+
+
+def fixtures_table(fixtures: list[dict], title: str, note: str = "") -> str:
+    """Upcoming matches with win/draw/win probabilities."""
+    if not fixtures:
+        return ""
+    body = []
+    for m in fixtures:
+        body.append(
+            "<tr>"
+            f'<td class="l num">{escape(fmt_date(m["date"]))}</td>'
+            f'<td class="num hide-sm">{escape(m.get("group", ""))}</td>'
+            f'<td class="l"><span class="team-name">{escape(m["home"])}</span>'
+            f' <span class="team-sub">v</span> '
+            f'<span class="team-name">{escape(m["away"])}</span></td>'
+            f'{_prob_td(m["p_home"])}'
+            f'{_prob_td(m["p_draw"])}'
+            f'{_prob_td(m["p_away"])}'
+            "</tr>"
+        )
+    home_label = escape(fixtures[0].get("home_label", "Home win"))
+    return (
+        section_head(title, note)
+        + '<table class="fte"><thead><tr>'
+        + '<th class="l">Date</th><th class="hide-sm">Group</th>'
+        + f'<th class="l">Match</th><th>{home_label}</th><th>Draw</th><th>Away win</th>'
+        + "</tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table>"
+    )
+
+
 def backtest_models_table(backtest: dict) -> str:
     """Model comparison: ours vs. benchmarks on the same games."""
     rows = []
@@ -279,6 +352,8 @@ def calibration_table(backtest: dict) -> str:
 
 
 def decades_table(backtest: dict) -> str:
+    if not backtest.get("decades"):
+        return ""
     rows = []
     for d in backtest["decades"]:
         rows.append(

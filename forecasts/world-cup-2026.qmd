@@ -1,0 +1,50 @@
+---
+pagetitle: "2026 World Cup Forecast | Above .500"
+---
+
+```{python}
+#| output: asis
+from above500 import wc_elo, render
+from html import escape
+
+f = wc_elo.forecast()
+
+print(f'<span class="kicker">{escape(f["league"])}</span>')
+print(f'<h1 class="headline">{escape(f["name"])}</h1>')
+print(f'<p class="dek">{escape(f["description"])}</p>')
+print(render.byline(f))
+```
+
+```{python}
+#| output: asis
+columns = [
+    {"key": "name", "label": "Team", "kind": "team"},
+    {"key": "rating", "label": "Elo", "kind": "num"},
+    {"key": "group", "label": "Group", "kind": "text"},
+    {"key": "history", "label": "Trend", "kind": "spark", "hide_sm": True},
+    {"key": "r32_prob", "label": "Make round of 32", "kind": "prob"},
+    {"key": "qf_prob", "label": "Make quarters", "kind": "prob"},
+    {"key": "sf_prob", "label": "Make semis", "kind": "prob"},
+    {"key": "title_prob", "label": "Win World Cup", "kind": "prob"},
+]
+print(render.odds_table(f["standings"], columns,
+                        "Who will win the World Cup?",
+                        f"48 teams — through {f['data_through']}",
+                        sort_key="title_prob"))
+```
+
+```{python}
+#| output: asis
+print(render.fixtures_table(f["upcoming"], "Upcoming matches",
+                            "Win/draw/win probabilities"))
+```
+
+```{python}
+#| output: asis
+print('<details class="model-performance">')
+print('<summary>Model performance &amp; backtest</summary>')
+print(render.backtest_models_table(f["backtest"]))
+print(render.calibration_table(f["backtest"]))
+print('</details>')
+print(render.methodology_box(f))
+```
