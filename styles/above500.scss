@@ -401,6 +401,35 @@ table.fte {
   max-width: 680px;
 }
 
+/* Collapsed-by-default backtest details, styled like a section header */
+details.model-performance {
+  margin: 40px 0 0;
+  border-top: 1px solid var(--rule-dark);
+
+  > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 8px 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink);
+
+    &::-webkit-details-marker { display: none; }
+
+    &::after {
+      content: " +";
+      color: var(--ink-faint);
+    }
+  }
+
+  &[open] > summary::after { content: " \2212"; }
+
+  .section-head { border-top: none; margin-top: 16px; }
+  .section-head:first-of-type { margin-top: 4px; }
+}
+
 /* --------------------------------------------------------------------------
    Sparklines
    -------------------------------------------------------------------------- */
