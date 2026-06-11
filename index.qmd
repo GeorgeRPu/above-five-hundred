@@ -11,18 +11,14 @@ every model re-runs when the site is built.</p>
 
 ```{python}
 #| output: asis
-from above500 import MODELS, nba_elo, render
+from importlib import import_module
+from above500 import MODELS, render
 
-forecasts = {"nba-elo": nba_elo.forecast()}
+rows = []
+for m in MODELS:
+    f = import_module(f"above500.{m['module']}").forecast()
+    rows.append(render.model_row(m, updated=f["updated"], season=f["season"]))
 
-rows = "".join(
-    render.model_row(
-        m,
-        updated=forecasts[m["slug"]]["updated"] if m["slug"] in forecasts else None,
-        season=forecasts[m["slug"]]["season"] if m["slug"] in forecasts else None,
-    )
-    for m in MODELS
-)
 print(render.section_head("Latest forecasts", "Updated daily"))
-print(f'<div class="model-index">{rows}</div>')
+print(f'<div class="model-index">{"".join(rows)}</div>')
 ```
