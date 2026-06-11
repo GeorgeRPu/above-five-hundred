@@ -175,6 +175,8 @@ def standings_table(forecast: dict) -> str:
     labels = {"rating": "Rating", "change": "7-day", "record": "Record",
               "playoff_prob": "Make playoffs", "title_prob": "Win title"}
     labels.update(forecast.get("column_labels", {}))
+    has_probs = any(r.get("playoff_prob") is not None or r.get("title_prob") is not None
+                    for r in rows)
 
     body = []
     for r in sorted(rows, key=lambda r: r.get("rating") or 0, reverse=True):
@@ -182,30 +184,117 @@ def standings_table(forecast: dict) -> str:
         change_color = ("var(--accent-green)" if (change or 0) > 0
                         else "var(--accent-red)" if (change or 0) < 0 else "inherit")
         rating = r.get("rating")
-        body.append(
-            "<tr>"
-            f'<td class="l">{team_cell(r, sub=r.get("sub"))}</td>'
-            f'<td class="num">{round(rating) if rating is not None else "—"}</td>'
-            f'<td class="num hide-sm" style="color:{change_color}">{fmt_signed(change)}</td>'
-            f'<td class="hide-sm">{sparkline(r.get("history") or [])}</td>'
-            f'<td class="num">{escape(r.get("record") or "—")}</td>'
-            f'{_prob_td(r.get("playoff_prob"))}'
-            f'{_prob_td(r.get("title_prob"))}'
-            "</tr>"
-        )
+        cells = [
+            f'<td class="l">{team_cell(r, sub=r.get("sub"))}</td>',
+            f'<td class="num">{round(rating) if rating is not None else "—"}</td>',
+            f'<td class="num hide-sm" style="color:{change_color}">{fmt_signed(change)}</td>',
+            f'<td class="hide-sm">{sparkline(r.get("history") or [])}</td>',
+            f'<td class="num">{escape(r.get("record") or "—")}</td>',
+        ]
+        if has_probs:
+            cells.append(_prob_td(r.get("playoff_prob")))
+            cells.append(_prob_td(r.get("title_prob")))
+        body.append("<tr>" + "".join(cells) + "</tr>")
+
+    head = [
+        '<th class="l">Team</th>',
+        f'<th>{labels["rating"]}</th>',
+        f'<th class="hide-sm">{labels["change"]}</th>',
+        '<th class="hide-sm">Trend</th>',
+        f'<th>{labels["record"]}</th>',
+    ]
+    if has_probs:
+        head.append(f'<th>{labels["playoff_prob"]}</th>')
+        head.append(f'<th>{labels["title_prob"]}</th>')
 
     return (
-        section_head("Ratings & odds", f"{len(rows)} teams")
+        section_head(forecast.get("standings_title", "Ratings & odds"),
+                     f"{len(rows)} teams")
         + '<table class="fte"><thead><tr>'
-        + '<th class="l">Team</th>'
-        + f'<th>{labels["rating"]}</th>'
-        + f'<th class="hide-sm">{labels["change"]}</th>'
-        + '<th class="hide-sm">Trend</th>'
-        + f'<th>{labels["record"]}</th>'
-        + f'<th>{labels["playoff_prob"]}</th>'
-        + f'<th>{labels["title_prob"]}</th>'
+        + "".join(head)
         + "</tr></thead><tbody>"
         + "".join(body)
+        + "</tbody></table>"
+    )
+
+
+def backtest_models_table(backtest: dict) -> str:
+    """Model comparison: ours vs. benchmarks on the same games."""
+    rows = []
+    for i, m in enumerate(backtest["models"]):
+        name = escape(m["model"])
+        if i == 0:
+            name = f"<strong>{name}</strong>"
+        rows.append(
+            "<tr>"
+            f'<td class="l">{name}</td>'
+            f'<td class="num">{m["n"]:,}</td>'
+            f'<td class="num">{m["accuracy"]:.1%}</td>'
+            f'<td class="num">{m["brier"]:.4f}</td>'
+            f'<td class="num">{m["logloss"]:.4f}</td>'
+            "</tr>"
+        )
+    return (
+        section_head(f"Backtest since {backtest['since']}",
+                     f"{backtest['n']:,} games, walk-forward")
+        + '<table class="fte"><thead><tr>'
+        + '<th class="l">Model</th><th>Games</th><th>Accuracy</th>'
+        + '<th>Brier score</th><th>Log loss</th>'
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
+        + '<p class="table-note">Accuracy is the share of games where the favorite won. '
+        + "Brier score and log loss measure probability quality; lower is better. A coin "
+        + "flip has a Brier score of 0.2500. The reference Elo is scored only on games "
+        + "where it published a forecast.</p>"
+    )
+
+
+def calibration_table(backtest: dict) -> str:
+    """Predicted vs. actual home win rate by forecast bucket."""
+    rows = []
+    for b in backtest["calibration"]:
+        gap = b["actual"] - b["predicted"]
+        rows.append(
+            "<tr>"
+            f'<td class="l num">{escape(b["range"])}</td>'
+            f'<td class="num">{b["n"]:,}</td>'
+            f'<td class="num">{b["predicted"]:.1%}</td>'
+            f'<td class="num">{b["actual"]:.1%}</td>'
+            f'<td class="num">{gap:+.1%}</td>'
+            "</tr>"
+        )
+    return (
+        section_head("Calibration", "Forecast vs. reality")
+        + '<table class="fte"><thead><tr>'
+        + '<th class="l">Home win forecast</th><th>Games</th>'
+        + '<th>Avg. forecast</th><th>Actual win rate</th><th>Gap</th>'
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
+        + '<p class="table-note">A well-calibrated model\'s forecasts match observed '
+        + "frequencies: games it calls 70-30 should be won by the favorite about 70% of "
+        + "the time.</p>"
+    )
+
+
+def decades_table(backtest: dict) -> str:
+    rows = []
+    for d in backtest["decades"]:
+        rows.append(
+            "<tr>"
+            f'<td class="l">{escape(d["decade"])}</td>'
+            f'<td class="num">{d["n"]:,}</td>'
+            f'<td class="num">{d["accuracy"]:.1%}</td>'
+            f'<td class="num">{d["brier"]:.4f}</td>'
+            "</tr>"
+        )
+    return (
+        section_head("Era by era", "Predictability over time")
+        + '<table class="fte"><thead><tr>'
+        + '<th class="l">Decade</th><th>Games</th><th>Accuracy</th><th>Brier score</th>'
+        + "</tr></thead><tbody>"
+        + "".join(rows)
         + "</tbody></table>"
     )
 

@@ -1,5 +1,5 @@
 ---
-pagetitle: "NBA Elo Forecast | Above .500"
+pagetitle: "NBA Elo Ratings | Above .500"
 ---
 
 ```{python}
@@ -17,16 +17,23 @@ print(render.byline(f))
 
 ```{python}
 #| output: asis
-print(render.games_section(f, "upcoming", "Upcoming games", "Win probabilities"))
+print(render.backtest_models_table(f["backtest"]))
 ```
 
 ```{python}
 #| output: asis
-print(render.games_section(f, "final", "Recent results", "Model probability vs. outcome"))
+print(render.calibration_table(f["backtest"]))
+print(render.decades_table(f["backtest"]))
 ```
 
 ```{python}
 #| output: asis
 print(render.standings_table(f))
+```
+
+```{python}
+#| output: asis
+print(render.games_section(f, "final", "Latest games",
+                           f"Through {f['data_through']} — forecast vs. outcome"))
 print(render.methodology_box(f))
 ```

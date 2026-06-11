@@ -94,16 +94,43 @@ Notes:
 - Helpers in `above500.render` turn the payload into HTML
   (`games_section`, `standings_table`, `byline`, `model_row`, …).
 
+## Models
+
+### NBA Elo (`above500/nba_elo.py`)
+
+Franchise Elo ratings computed from 75,705 real NBA/ABA games (1946-47
+to the present), following FiveThirtyEight's published methodology:
+1300 starting rating, 25% between-season reversion toward 1505, +100
+Elo home-court advantage, K=20 with a margin-of-victory multiplier.
+
+The model is backtested walk-forward over all 72,711 games since 1955
+(every prediction uses only pre-game information): **67.5% accuracy,
+0.2068 Brier score**, versus 0.2374 for always picking the home team
+and 0.2500 for a coin flip. Its per-game probabilities reproduce the
+538-lineage forecasts stored in the data to a mean absolute difference
+of ~3e-6, a strong independent check on the implementation.
+
+**Data**: [FiveThirtyEight's nbaallelo dataset](https://github.com/fivethirtyeight/data/tree/master/nba-elo)
+(CC BY 4.0) through 2014-15, continued from 2015-16 onward by
+[Neil Paine's maintained NBA-elo dataset](https://github.com/Neil-Paine-1/NBA-elo).
+Both are merged by `scripts/prepare_nba_data.py` into a committed
+`above500/data/nba_games.csv.gz` (~1 MB). At render time the model also
+fetches any games newer than the archive from Paine's repo (falling
+back to the archive if offline), so the nightly build keeps ratings as
+current as the upstream data allows.
+
 ## Layout
 
 ```
 _quarto.yml              site config (nav, theme, execution)
-index.qmd                home: model cards
+index.qmd                home: model index
 about.qmd                methodology
 forecasts/nba-elo.qmd    one page per model
 above500/                Python package: models + HTML renderers
-  nba_elo.py             sample Elo model with Monte Carlo odds
+  nba_elo.py             NBA Elo ratings + 1955-2015 backtest
   render.py              payload -> HTML (tables, matchups, sparklines)
+  data/nba_games.csv.gz  historical game results (CC BY 4.0, 538)
+scripts/prepare_nba_data.py    regenerates the game archive
 styles/above500.scss     538-inspired Quarto theme
 .github/workflows/deploy.yml   render + deploy, nightly cron
 ```

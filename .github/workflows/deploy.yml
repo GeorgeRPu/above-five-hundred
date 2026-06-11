@@ -37,6 +37,8 @@ jobs:
           version: 1.7.34
 
       - run: quarto render
+        env:
+          BALLDONTLIE_API_KEY: ${{ secrets.BALLDONTLIE_API_KEY }}
 
       - uses: actions/configure-pages@v5
 
