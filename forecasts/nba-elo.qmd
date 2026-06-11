@@ -33,7 +33,7 @@ print(render.standings_table(f))
 
 ```{python}
 #| output: asis
-print(render.games_section(f, "final", "The last games on record",
-                           "2015 Finals — forecast vs. outcome"))
+print(render.games_section(f, "final", "Latest games",
+                           f"Through {f['data_through']} — forecast vs. outcome"))
 print(render.methodology_box(f))
 ```

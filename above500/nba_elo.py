@@ -1,9 +1,15 @@
-"""NBA franchise Elo ratings computed from real games, 1946-47 to 2014-15.
+"""NBA franchise Elo ratings computed from real games, 1946-47 to today.
 
-Data: FiveThirtyEight's nbaallelo dataset (CC BY 4.0), trimmed by
-scripts/prepare_nba_data.py into above500/data/nba_games.csv.gz — 63,157
-NBA and ABA games, each carrying 538's own pre-game home win probability
-so the backtest can benchmark against it.
+Data lineage (both CC BY 4.0 / openly licensed):
+- FiveThirtyEight's nbaallelo dataset: every NBA/ABA game 1946-47 through
+  2014-15, with 538's own pre-game forecasts for benchmarking.
+- Neil Paine's maintained continuation of the 538 Elo file for seasons
+  2016 onward: https://github.com/Neil-Paine-1/NBA-elo
+
+A trimmed merge of both is committed at above500/data/nba_games.csv.gz.
+At render time the model additionally tries to fetch games newer than the
+archive from Paine's repo, so the nightly build picks up fresh results
+automatically; if the fetch fails the committed archive is used alone.
 
 The rating system follows 538's published NBA Elo methodology:
 new franchises start at 1300, ratings revert 25% toward 1505 between
@@ -15,12 +21,19 @@ from __future__ import annotations
 
 import csv
 import gzip
+import io
 import math
+import os
+import time
+import urllib.request
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
 DATA = Path(__file__).resolve().parent / "data" / "nba_games.csv.gz"
+LIVE_URL = "https://raw.githubusercontent.com/Neil-Paine-1/NBA-elo/main/nba_elo.csv"
+LIVE_CACHE = Path(os.environ.get("TMPDIR", "/tmp")) / "above500_nba_elo_remote.csv"
+LIVE_CACHE_MAX_AGE = 12 * 3600  # seconds
 
 INITIAL_RATING = 1300.0
 MEAN_RATING = 1505.0
@@ -29,7 +42,7 @@ HOME_ADVANTAGE = 100.0  # Elo points
 K_FACTOR = 20.0
 BACKTEST_FROM = 1955    # season end-year: the shot-clock era onward
 
-# abbr/color for the 30 franchises active in 2014-15 (keyed by fran_id)
+# abbr/color for the 30 current franchises (fran_id naming from nbaallelo)
 TEAM_META = {
     "Hawks": ("ATL", "#e03a3e"), "Celtics": ("BOS", "#007a33"),
     "Nets": ("BKN", "#222222"), "Hornets": ("CHA", "#00788c"),
@@ -48,6 +61,19 @@ TEAM_META = {
     "Jazz": ("UTA", "#002b5c"), "Wizards": ("WAS", "#002b5c"),
 }
 
+# Paine's file uses basketball-reference abbreviations
+ABBR_TO_FRANCHISE = {
+    "ATL": "Hawks", "BOS": "Celtics", "BRK": "Nets", "CHI": "Bulls",
+    "CHO": "Hornets", "CLE": "Cavaliers", "DAL": "Mavericks",
+    "DEN": "Nuggets", "DET": "Pistons", "GSW": "Warriors",
+    "HOU": "Rockets", "IND": "Pacers", "LAC": "Clippers", "LAL": "Lakers",
+    "MEM": "Grizzlies", "MIA": "Heat", "MIL": "Bucks",
+    "MIN": "Timberwolves", "NOP": "Pelicans", "NYK": "Knicks",
+    "OKC": "Thunder", "ORL": "Magic", "PHI": "Sixers", "PHO": "Suns",
+    "POR": "Trailblazers", "SAC": "Kings", "SAS": "Spurs",
+    "TOR": "Raptors", "UTA": "Jazz", "WAS": "Wizards",
+}
+
 
 def elo_win_prob(diff: float) -> float:
     """Win probability for the side whose rating advantage is `diff`."""
@@ -59,21 +85,64 @@ def _mov_multiplier(margin: int, winner_diff: float) -> float:
     return ((margin + 3) ** 0.8) / (7.5 + 0.006 * winner_diff)
 
 
-def _load_games() -> list[dict]:
-    with gzip.open(DATA, "rt", newline="") as f:
-        games = []
-        for r in csv.DictReader(f):
+def _parse_archive_row(r: dict) -> dict:
+    return {
+        "season": int(r["season"]),
+        "date": r["date"],
+        "playoffs": r["playoffs"] == "1",
+        "home": r["home"],
+        "away": r["away"],
+        "home_pts": int(r["home_pts"]),
+        "away_pts": int(r["away_pts"]),
+        "neutral": r["neutral"] == "1",
+        "p_ref_home": float(r["p_ref_home"]),
+    }
+
+
+def _fetch_live_games(after_date: str) -> list[dict]:
+    """Games newer than the archive, from Paine's repo. Empty list on any failure."""
+    try:
+        if not (LIVE_CACHE.exists()
+                and time.time() - LIVE_CACHE.stat().st_mtime < LIVE_CACHE_MAX_AGE):
+            with urllib.request.urlopen(LIVE_URL, timeout=60) as resp:
+                LIVE_CACHE.write_bytes(resp.read())
+        text = LIVE_CACHE.read_text()
+    except Exception:
+        return []
+
+    games, seen_neutral = [], set()
+    try:
+        for r in csv.DictReader(io.StringIO(text)):
+            if r["date"] <= after_date or not r.get("score1") or r["score1"] == "NA":
+                continue
+            if r["neutral"] == "1":
+                key = (r["date"], frozenset((r["team1"], r["team2"])))
+                if key in seen_neutral:
+                    continue
+                seen_neutral.add(key)
+            elif r["is_home"] != "1":
+                continue
             games.append({
                 "season": int(r["season"]),
-                "date": datetime.strptime(r["date"], "%m/%d/%Y").date(),
-                "playoffs": r["playoffs"] == "1",
-                "home": r["home"],
-                "away": r["away"],
-                "home_pts": int(r["home_pts"]),
-                "away_pts": int(r["away_pts"]),
+                "date": r["date"],
+                "playoffs": r["playoff"] == "TRUE",
+                "home": ABBR_TO_FRANCHISE[r["team1"]],
+                "away": ABBR_TO_FRANCHISE[r["team2"]],
+                "home_pts": int(r["score1"]),
+                "away_pts": int(r["score2"]),
                 "neutral": r["neutral"] == "1",
-                "p538_home": float(r["p538_home"]),
+                "p_ref_home": float(r["elo_prob1"]),
             })
+    except Exception:
+        return []
+    games.sort(key=lambda g: (g["date"], g["home"]))
+    return games
+
+
+def _load_games() -> list[dict]:
+    with gzip.open(DATA, "rt", newline="") as f:
+        games = [_parse_archive_row(r) for r in csv.DictReader(f)]
+    games += _fetch_live_games(after_date=games[-1]["date"])
     return games
 
 
@@ -85,7 +154,7 @@ def _run() -> dict:
 
     ratings: dict[str, float] = {}
     season_now = games[0]["season"]
-    predictions = []          # (season, p_home, home_won, p538_home)
+    predictions = []          # (season, p_home, home_won, p_ref_home)
     final_records: dict[str, list[int]] = {}      # team -> [w, l] in final season
     final_history: dict[str, list[float]] = {}    # team -> rating after each game
     last_games: list[dict] = []
@@ -106,7 +175,7 @@ def _run() -> dict:
 
         home_won = g["home_pts"] > g["away_pts"]
         if g["season"] >= BACKTEST_FROM:
-            predictions.append((g["season"], p_home, home_won, g["p538_home"]))
+            predictions.append((g["season"], p_home, home_won, g["p_ref_home"]))
 
         margin = abs(g["home_pts"] - g["away_pts"])
         winner_diff = diff if home_won else -diff
@@ -122,7 +191,7 @@ def _run() -> dict:
             final_history.setdefault(home, []).append(round(ratings[home], 1))
             final_history.setdefault(away, []).append(round(ratings[away], 1))
             last_games.append({
-                "date": g["date"].isoformat(),
+                "date": g["date"],
                 "status": "final",
                 "label": "Playoffs" if g["playoffs"] else None,
                 "home": {"name": home, "rating": round(r_home),
@@ -134,6 +203,7 @@ def _run() -> dict:
     return {
         "ratings": ratings,
         "final_season": final_season,
+        "data_through": games[-1]["date"],
         "predictions": predictions,
         "final_records": final_records,
         "final_history": final_history,
@@ -158,14 +228,14 @@ def _score(pairs: list[tuple[float, bool]]) -> dict:
 
 def _backtest(predictions) -> dict:
     ours = [(p, won) for _, p, won, _ in predictions]
-    p538 = [(p, won) for _, _, won, p in predictions]
+    ref = [(p, won) for _, _, won, p in predictions]
     home_rate = sum(won for _, won in ours) / len(ours)
     naive = [(home_rate, won) for _, won in ours]
     coin = [(0.5, won) for _, won in ours]
 
     models = [
         {"model": "Above .500 Elo", **_score(ours)},
-        {"model": "FiveThirtyEight Elo", **_score(p538)},
+        {"model": "FiveThirtyEight / Neil Paine Elo", **_score(ref)},
         {"model": f"Home team always ({home_rate:.0%})", **_score(naive)},
         {"model": "Coin flip", **_score(coin)},
     ]
@@ -184,7 +254,7 @@ def _backtest(predictions) -> dict:
         })
 
     decades = []
-    for start in range(1950, 2020, 10):
+    for start in range(1950, 2030, 10):
         sel = [(p, won) for season, p, won, _ in predictions
                if start <= season - 1 < start + 10]
         if not sel:
@@ -210,6 +280,7 @@ def forecast() -> dict:
     run = _run()
     final_season = run["final_season"]
     season_label = f"{final_season - 1}-{str(final_season)[2:]}"
+    through = datetime.strptime(run["data_through"], "%Y-%m-%d").strftime("%b %-d, %Y")
 
     def team_blob(side: dict) -> dict:
         abbr, color = TEAM_META.get(side["name"], (None, None))
@@ -237,25 +308,26 @@ def forecast() -> dict:
         "slug": "nba-elo",
         "name": "NBA Elo Ratings",
         "league": "NBA",
-        "season": f"1946–{final_season} archive",
+        "season": f"{season_label} season",
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "data_through": through,
         "description": f"Franchise Elo ratings computed from {run['n_games']:,} real NBA and "
-                       f"ABA games, walk-forward backtested over every game since "
-                       f"{BACKTEST_FROM} and benchmarked against FiveThirtyEight's own "
-                       f"forecasts.",
+                       f"ABA games since 1946, current through {through}, walk-forward "
+                       f"backtested over every game since {BACKTEST_FROM}.",
         "methodology": "Ratings follow FiveThirtyEight's published NBA Elo method: new "
                        "franchises start at 1300, ratings revert 25% toward 1505 between "
                        "seasons, home court is worth 100 Elo points, and games update "
                        "ratings with K=20 scaled by a margin-of-victory multiplier. Every "
                        "prediction in the backtest uses only information available before "
-                       "tip-off. Game data is FiveThirtyEight's nbaallelo dataset "
-                       "(CC BY 4.0), covering 1946-47 through 2014-15.",
+                       "tip-off. Game data: FiveThirtyEight's nbaallelo dataset (CC BY "
+                       "4.0) through 2014-15, continued for later seasons by Neil Paine's "
+                       "maintained NBA-elo dataset.",
         "games": [
             {**g, "home": team_blob(g["home"]), "away": team_blob(g["away"])}
             for g in run["last_games"]
         ],
         "standings": standings,
-        "standings_title": f"Final Elo ratings, {season_label}",
+        "standings_title": f"Current Elo ratings (through {through})",
         "column_labels": {"rating": "Elo", "change": f"{season_label} Δ",
                           "record": season_label},
         "backtest": _backtest(run["predictions"]),

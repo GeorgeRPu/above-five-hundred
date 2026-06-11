@@ -98,22 +98,26 @@ Notes:
 
 ### NBA Elo (`above500/nba_elo.py`)
 
-Franchise Elo ratings computed from 63,157 real NBA/ABA games (1946-47
-through 2014-15), following FiveThirtyEight's published methodology:
+Franchise Elo ratings computed from 75,705 real NBA/ABA games (1946-47
+to the present), following FiveThirtyEight's published methodology:
 1300 starting rating, 25% between-season reversion toward 1505, +100
 Elo home-court advantage, K=20 with a margin-of-victory multiplier.
 
-The model is backtested walk-forward over all 60,163 games since 1955
-(every prediction uses only pre-game information): **68.0% accuracy,
-0.2041 Brier score**, versus 0.2353 for always picking the home team
-and 0.2500 for a coin flip. Its per-game probabilities reproduce
-FiveThirtyEight's stored forecasts to a mean absolute difference of
-3e-6, which is a strong independent check on the implementation.
+The model is backtested walk-forward over all 72,711 games since 1955
+(every prediction uses only pre-game information): **67.5% accuracy,
+0.2068 Brier score**, versus 0.2374 for always picking the home team
+and 0.2500 for a coin flip. Its per-game probabilities reproduce the
+538-lineage forecasts stored in the data to a mean absolute difference
+of ~3e-6, a strong independent check on the implementation.
 
 **Data**: [FiveThirtyEight's nbaallelo dataset](https://github.com/fivethirtyeight/data/tree/master/nba-elo)
-(CC BY 4.0), trimmed by `scripts/prepare_nba_data.py` into
-`above500/data/nba_games.csv.gz` (~1 MB) so builds don't depend on the
-upstream file.
+(CC BY 4.0) through 2014-15, continued from 2015-16 onward by
+[Neil Paine's maintained NBA-elo dataset](https://github.com/Neil-Paine-1/NBA-elo).
+Both are merged by `scripts/prepare_nba_data.py` into a committed
+`above500/data/nba_games.csv.gz` (~1 MB). At render time the model also
+fetches any games newer than the archive from Paine's repo (falling
+back to the archive if offline), so the nightly build keeps ratings as
+current as the upstream data allows.
 
 ## Layout
 
