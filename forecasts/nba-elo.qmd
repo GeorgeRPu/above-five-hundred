@@ -17,17 +17,6 @@ print(render.byline(f))
 
 ```{python}
 #| output: asis
-print(render.backtest_models_table(f["backtest"]))
-```
-
-```{python}
-#| output: asis
-print(render.calibration_table(f["backtest"]))
-print(render.decades_table(f["backtest"]))
-```
-
-```{python}
-#| output: asis
 print(render.standings_table(f))
 ```
 
@@ -35,5 +24,15 @@ print(render.standings_table(f))
 #| output: asis
 print(render.games_section(f, "final", "Latest games",
                            f"Through {f['data_through']} — forecast vs. outcome"))
+```
+
+```{python}
+#| output: asis
+print('<details class="model-performance">')
+print('<summary>Model performance &amp; backtest</summary>')
+print(render.backtest_models_table(f["backtest"]))
+print(render.calibration_table(f["backtest"]))
+print(render.decades_table(f["backtest"]))
+print('</details>')
 print(render.methodology_box(f))
 ```
