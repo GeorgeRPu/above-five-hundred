@@ -8,9 +8,10 @@ render time, and emit HTML via `above500.render`.
 MODELS = [
     {
         "slug": "nba-elo",
-        "name": "NBA Elo Forecast",
+        "name": "NBA Elo Ratings",
         "league": "NBA",
-        "description": "Game-by-game win probabilities, power ratings and title odds.",
+        "description": "Franchise Elo ratings from 63,157 real games, backtested "
+                       "on six decades of results.",
         "color": "#fc4f30",
         "href": "forecasts/nba-elo.qmd",
     },

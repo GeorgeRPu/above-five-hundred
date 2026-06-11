@@ -94,16 +94,39 @@ Notes:
 - Helpers in `above500.render` turn the payload into HTML
   (`games_section`, `standings_table`, `byline`, `model_row`, …).
 
+## Models
+
+### NBA Elo (`above500/nba_elo.py`)
+
+Franchise Elo ratings computed from 63,157 real NBA/ABA games (1946-47
+through 2014-15), following FiveThirtyEight's published methodology:
+1300 starting rating, 25% between-season reversion toward 1505, +100
+Elo home-court advantage, K=20 with a margin-of-victory multiplier.
+
+The model is backtested walk-forward over all 60,163 games since 1955
+(every prediction uses only pre-game information): **68.0% accuracy,
+0.2041 Brier score**, versus 0.2353 for always picking the home team
+and 0.2500 for a coin flip. Its per-game probabilities reproduce
+FiveThirtyEight's stored forecasts to a mean absolute difference of
+3e-6, which is a strong independent check on the implementation.
+
+**Data**: [FiveThirtyEight's nbaallelo dataset](https://github.com/fivethirtyeight/data/tree/master/nba-elo)
+(CC BY 4.0), trimmed by `scripts/prepare_nba_data.py` into
+`above500/data/nba_games.csv.gz` (~1 MB) so builds don't depend on the
+upstream file.
+
 ## Layout
 
 ```
 _quarto.yml              site config (nav, theme, execution)
-index.qmd                home: model cards
+index.qmd                home: model index
 about.qmd                methodology
 forecasts/nba-elo.qmd    one page per model
 above500/                Python package: models + HTML renderers
-  nba_elo.py             sample Elo model with Monte Carlo odds
+  nba_elo.py             NBA Elo ratings + 1955-2015 backtest
   render.py              payload -> HTML (tables, matchups, sparklines)
+  data/nba_games.csv.gz  historical game results (CC BY 4.0, 538)
+scripts/prepare_nba_data.py    regenerates the game archive
 styles/above500.scss     538-inspired Quarto theme
 .github/workflows/deploy.yml   render + deploy, nightly cron
 ```
