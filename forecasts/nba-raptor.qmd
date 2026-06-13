@@ -1,0 +1,70 @@
+---
+pagetitle: "NBA RAPTOR Player Ratings | Above .500"
+---
+
+```{python}
+#| output: asis
+from above500 import nba_raptor, render
+from html import escape
+
+f = nba_raptor.forecast()
+est = f["estimated"]
+
+print(f'<span class="kicker">{escape(f["league"])}</span>')
+print(f'<h1 class="headline">{escape(f["name"])}</h1>')
+print(f'<p class="dek">{escape(f["description"])}</p>')
+print(render.byline(f))
+if est:
+    print(f'<p class="table-note">Seasons after {escape(f["official_through"])} are '
+          f'<strong>Box-RAPTOR estimates</strong> — RAPTOR\'s box-score component, '
+          f'rebuilt and calibrated to 538\'s own ratings (fidelity below). 538 retired '
+          f'RAPTOR after {escape(f["official_through"])}.</p>')
+```
+
+```{python}
+#| output: asis
+title = (f'Estimated RAPTOR — {f["season_label"]}' if est
+         else f'Top players — {f["season_label"]}')
+note = ("Box-RAPTOR estimate · best by WAR" if est else "Best by wins above replacement")
+print(render.odds_table(
+    f["leaderboard"],
+    columns=[
+        {"key": "name", "kind": "team", "label": "Player"},
+        {"key": "mp", "kind": "num", "label": "Minutes", "hide_sm": True},
+        {"key": "off", "kind": "dec", "label": "Off.", "hide_sm": True},
+        {"key": "dfn", "kind": "dec", "label": "Def.", "hide_sm": True},
+        {"key": "raptor", "kind": "dec", "label": "RAPTOR"},
+        {"key": "history", "kind": "spark", "label": "Career", "hide_sm": True},
+        {"key": "war", "kind": "dec", "label": "WAR"},
+    ],
+    title=title, note=note, sort_key="war",
+))
+```
+
+```{python}
+#| output: asis
+print(render.odds_table(
+    f["projections"],
+    columns=[
+        {"key": "name", "kind": "team", "label": "Player"},
+        {"key": "history", "kind": "spark", "label": "Career", "hide_sm": True},
+        {"key": "last", "kind": "dec", "label": f["season_label"]},
+        {"key": "proj", "kind": "dec", "label": "Projection"},
+    ],
+    title=f'Projected {f["proj_label"]} RAPTOR',
+    note="Model's one-season-ahead forecast",
+    sort_key="proj",
+))
+```
+
+```{python}
+#| output: asis
+print('<details class="model-performance">')
+print('<summary>Model performance &amp; backtests</summary>')
+print(render.fidelity_table(f.get("fidelity")))
+print(render.regression_backtest_table(f["backtest"]))
+print(render.projection_tiers_table(f["backtest"]))
+print(render.regression_eras_table(f["backtest"]))
+print('</details>')
+print(render.methodology_box(f))
+```
