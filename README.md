@@ -119,15 +119,22 @@ fetches any games newer than the archive from Paine's repo (falling
 back to the archive if offline), so the nightly build keeps ratings as
 current as the upstream data allows.
 
-### 2026 World Cup Forecast (`above500/wc_elo.py`)
+### 2026 World Cup Forecast (`above500/wc_spi.py`)
 
-National-team Elo ratings computed from 49,000+ men's internationals
-since 1872 (World Football Elo conventions: importance-weighted K,
-goal-difference multiplier, +100 home advantage at non-neutral venues).
-Win/draw/loss probabilities come from a two-parameter Poisson goal
-model fitted to the rating gap; backtested on ~30,000 matches since
-1994 (58.9% three-way accuracy, 0.527 multiclass Brier vs 0.631 for
-base rates).
+A Soccer Power Index (SPI) model in the style of FiveThirtyEight: every
+national team carries an **offensive** rating (goals it would score
+against an average team) and a **defensive** rating (goals it would
+concede), fit online from goals scored and conceded across 49,000+
+men's internationals since 1872, with the update weighted by match
+importance. The headline SPI is the share of points a team would take
+against an average team in the field. Win/draw/loss probabilities come
+from a Poisson goal model on those ratings; backtested on ~30,000
+matches since 1994 (59.1% three-way accuracy, 0.521 multiclass Brier vs
+0.631 for base rates).
+
+Unlike 538's World Cup SPI, this uses only the match-based component —
+their model blended in 25% roster-based ratings derived from club
+football, which needs club data that isn't openly available.
 
 Tournament odds come from 10,000 Monte Carlo runs of the real 2026
 bracket: the actual group fixtures (groups are derived from the fixture
@@ -152,7 +159,7 @@ forecasts/                one page per model
   world-cup-2026.qmd
 above500/                Python package: models + HTML renderers
   nba_elo.py             NBA Elo ratings + 1955+ backtest
-  wc_elo.py              international football Elo + World Cup sim
+  wc_spi.py              international football SPI + World Cup sim
   render.py              payload -> HTML (tables, matchups, sparklines)
   data/                  committed data archives (CC BY 4.0 / CC0)
 scripts/                 regenerate the data archives

@@ -8,11 +8,11 @@ render time, and emit HTML via `above500.render`.
 MODELS = [
     {
         "slug": "world-cup-2026",
-        "module": "wc_elo",
+        "module": "wc_spi",
         "name": "2026 World Cup Forecast",
         "league": "FIFA World Cup",
         "description": "Advancement and title odds for all 48 teams, simulated "
-                       "from national-team Elo ratings.",
+                       "from Soccer Power Index ratings.",
         "color": "#6d904f",
         "href": "forecasts/world-cup-2026.qmd",
     },
