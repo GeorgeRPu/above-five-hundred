@@ -233,6 +233,13 @@ def _run() -> dict:
                 if t in wc_teams:
                     history_raw.setdefault(t, []).append((off[t], dfn[t]))
 
+    # Forward-looking roster prior: blend the match-based ratings 25% toward
+    # what each squad implies (FiveThirtyEight's roster share). No-op unless a
+    # current roster snapshot is present. Applied to the final ratings only,
+    # so the historical backtest below stays a pure match-based evaluation.
+    from . import roster
+    off, dfn, roster_blended = roster.blend(off, dfn, wc_teams)
+
     # The fit only identifies rating *differences*, so the absolute zero is a
     # free gauge. Anchor it on the World Cup field: SPI/Off/Def are expressed
     # relative to an average team in this tournament. This is display-only —
@@ -244,6 +251,7 @@ def _run() -> dict:
 
     return {
         "off": off, "dfn": dfn, "gauge": gauge,
+        "roster_blended": roster_blended,
         "HOME": HOME, "AWAY": AWAY, "NEUTRAL": NEUTRAL,
         "fixtures": fixtures,
         "history": history,
@@ -520,9 +528,13 @@ def forecast() -> dict:
                        "points and goal difference, advances the twelve winners, twelve "
                        "runners-up and eight best thirds, and uses the official bracket "
                        "with third-place slots randomized within FIFA's allocation rules. "
-                       "Unlike FiveThirtyEight's SPI we omit the roster/club-form blend, "
-                       "which needs club data that isn't openly available. Data: "
-                       "martj42/international_results (CC0), updated daily.",
+                       + ("Following FiveThirtyEight, the ratings then blend 25% toward a "
+                          "roster-strength prior built from current squads' club form "
+                          "(via API-Football); the backtest above reflects the match-only "
+                          "model. " if run["roster_blended"] else
+                          "A roster/club-form blend (FiveThirtyEight used 25%) is wired in "
+                          "but inactive until a squad snapshot is available. ")
+                       + "Match data: martj42/international_results (CC0), updated daily.",
         "standings": standings,
         "upcoming": upcoming,
         "backtest": _backtest(run),
