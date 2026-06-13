@@ -1,0 +1,199 @@
+{
+  "source": "EA Sports FC 26 (EAFC26-DataHub)",
+  "metric": "age-weighted mean of top-23 overall ratings",
+  "updated": "2026-06-13T09:06:58Z",
+  "teams": {
+    "Algeria": {
+      "rating": 74.897,
+      "n_players": 23
+    },
+    "Argentina": {
+      "rating": 80.87,
+      "n_players": 23
+    },
+    "Australia": {
+      "rating": 69.478,
+      "n_players": 23
+    },
+    "Austria": {
+      "rating": 76.13,
+      "n_players": 23
+    },
+    "Belgium": {
+      "rating": 78.479,
+      "n_players": 23
+    },
+    "Bosnia and Herzegovina": {
+      "rating": 70.647,
+      "n_players": 23
+    },
+    "Brazil": {
+      "rating": 83.174,
+      "n_players": 23
+    },
+    "Canada": {
+      "rating": 72.35,
+      "n_players": 23
+    },
+    "Cape Verde": {
+      "rating": 66.49,
+      "n_players": 23
+    },
+    "Colombia": {
+      "rating": 76.069,
+      "n_players": 23
+    },
+    "Croatia": {
+      "rating": 75.932,
+      "n_players": 23
+    },
+    "Cura\u00e7ao": {
+      "rating": 61.695,
+      "n_players": 15
+    },
+    "Czech Republic": {
+      "rating": 75.449,
+      "n_players": 23
+    },
+    "DR Congo": {
+      "rating": 71.887,
+      "n_players": 23
+    },
+    "Ecuador": {
+      "rating": 72.935,
+      "n_players": 23
+    },
+    "Egypt": {
+      "rating": 62.488,
+      "n_players": 10
+    },
+    "England": {
+      "rating": 83.391,
+      "n_players": 23
+    },
+    "France": {
+      "rating": 84.565,
+      "n_players": 23
+    },
+    "Germany": {
+      "rating": 82.681,
+      "n_players": 23
+    },
+    "Ghana": {
+      "rating": 73.622,
+      "n_players": 23
+    },
+    "Haiti": {
+      "rating": 59.455,
+      "n_players": 14
+    },
+    "Iran": {
+      "rating": 65.28,
+      "n_players": 6
+    },
+    "Iraq": {
+      "rating": 64.199,
+      "n_players": 14
+    },
+    "Ivory Coast": {
+      "rating": 76.713,
+      "n_players": 23
+    },
+    "Japan": {
+      "rating": 76.156,
+      "n_players": 23
+    },
+    "Jordan": {
+      "rating": 67.893,
+      "n_players": 3
+    },
+    "Mexico": {
+      "rating": 75.739,
+      "n_players": 23
+    },
+    "Morocco": {
+      "rating": 77.261,
+      "n_players": 23
+    },
+    "Netherlands": {
+      "rating": 81.479,
+      "n_players": 23
+    },
+    "New Zealand": {
+      "rating": 65.436,
+      "n_players": 23
+    },
+    "Norway": {
+      "rating": 76.478,
+      "n_players": 23
+    },
+    "Panama": {
+      "rating": 60.311,
+      "n_players": 15
+    },
+    "Paraguay": {
+      "rating": 72.381,
+      "n_players": 23
+    },
+    "Portugal": {
+      "rating": 81.38,
+      "n_players": 23
+    },
+    "Qatar": {
+      "rating": 64.125,
+      "n_players": 23
+    },
+    "Saudi Arabia": {
+      "rating": 69.377,
+      "n_players": 23
+    },
+    "Scotland": {
+      "rating": 74.59,
+      "n_players": 23
+    },
+    "Senegal": {
+      "rating": 75.033,
+      "n_players": 23
+    },
+    "South Africa": {
+      "rating": 63.701,
+      "n_players": 16
+    },
+    "South Korea": {
+      "rating": 72.652,
+      "n_players": 23
+    },
+    "Spain": {
+      "rating": 84.087,
+      "n_players": 23
+    },
+    "Sweden": {
+      "rating": 76.463,
+      "n_players": 23
+    },
+    "Switzerland": {
+      "rating": 76.522,
+      "n_players": 23
+    },
+    "Tunisia": {
+      "rating": 67.969,
+      "n_players": 23
+    },
+    "Turkey": {
+      "rating": 77.125,
+      "n_players": 23
+    },
+    "United States": {
+      "rating": 77.043,
+      "n_players": 23
+    },
+    "Uruguay": {
+      "rating": 77.783,
+      "n_players": 23
+    },
+    "Uzbekistan": {
+      "rating": 65.674,
+      "n_players": 5
+    }
+  }
+}

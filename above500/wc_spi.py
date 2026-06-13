@@ -529,9 +529,9 @@ def forecast() -> dict:
                        "runners-up and eight best thirds, and uses the official bracket "
                        "with third-place slots randomized within FIFA's allocation rules. "
                        + ("Following FiveThirtyEight, the ratings then blend 25% toward a "
-                          "roster-strength prior built from squads' 2024 club form (via "
-                          "API-Football, the latest its free tier covers); the backtest "
-                          "above reflects the match-only model. " if run["roster_blended"] else
+                          "roster-strength prior built from EA Sports FC 26 player ratings "
+                          "(an age-weighted mean of each nation's best 23 overalls); the "
+                          "backtest above reflects the match-only model. " if run["roster_blended"] else
                           "A roster/club-form blend (FiveThirtyEight used 25%) is wired in "
                           "but inactive until a squad snapshot is available. ")
                        + "Match data: martj42/international_results (CC0), updated daily.",

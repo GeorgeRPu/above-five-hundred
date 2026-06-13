@@ -1,15 +1,12 @@
 name: Refresh World Cup roster snapshot
 
-# Pulls current squads from API-Football and commits the roster snapshot.
-# Kept separate from the deploy workflow so renders stay offline and the
-# free tier's 100-requests/day limit only applies to this occasional job.
+# Rebuilds the roster-strength snapshot from the EA Sports FC 26 ratings
+# (committed to GitHub at EAFC26-DataHub). One unauthenticated fetch, no
+# rate limit; EA updates ratings every few weeks, so weekly is plenty.
 
 on:
   schedule:
-    # Daily after the API-Football quota resets (00:00 UTC); the fetch is
-    # incremental and quota-aware, so it fills over a couple of days then
-    # makes only a few cheap requests once complete.
-    - cron: "0 1 * * *"
+    - cron: "0 9 * * 1" # Mondays
   workflow_dispatch:
 
 permissions:
@@ -29,9 +26,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch roster snapshot
-        env:
-          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+      - name: Rebuild roster snapshot
         run: python3 scripts/fetch_roster.py
 
       - name: Commit if changed
