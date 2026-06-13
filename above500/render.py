@@ -416,6 +416,40 @@ def regression_backtest_table(backtest: dict) -> str:
     )
 
 
+def fidelity_table(fidelity: dict) -> str:
+    """How well the Box-RAPTOR reconstruction reproduces 538's real RAPTOR."""
+    if not fidelity:
+        return ""
+    corr = f'{fidelity["corr"]:.3f}' if fidelity.get("corr") is not None else "—"
+    return (
+        section_head("Box-RAPTOR fidelity",
+                     f"held-out 538 seasons since {fidelity['since']}")
+        + '<table class="fte"><thead><tr>'
+        + '<th class="l">Estimator</th><th>Seasons</th><th>MAE</th>'
+        + '<th>R²</th><th>Correlation</th>'
+        + "</tr></thead><tbody>"
+        + "<tr>"
+        + '<td class="l"><strong>Box-RAPTOR estimate</strong></td>'
+        + f'<td class="num">{fidelity["n"]:,}</td>'
+        + f'<td class="num">{fidelity["mae"]:.3f}</td>'
+        + f'<td class="num">{fidelity["r2"]:.3f}</td>'
+        + f'<td class="num">{corr}</td>'
+        + "</tr>"
+        + "<tr>"
+        + '<td class="l">League average (flat)</td>'
+        + f'<td class="num">{fidelity["n"]:,}</td>'
+        + f'<td class="num">{fidelity["baseline_mae"]:.3f}</td>'
+        + '<td class="num">0.000</td><td class="num">—</td>'
+        + "</tr>"
+        + "</tbody></table>"
+        + '<p class="table-note">Box scores reproduce a player\'s RAPTOR to within '
+        + f'{fidelity["mae"]:.2f} points on seasons the estimator never trained on. The '
+        + "rest is RAPTOR's on/off component, which play-by-play sees and box scores "
+        + "can't — so estimates are accurate in the middle and conservative for the "
+        + "superstars and the replacement-level fringe.</p>"
+    )
+
+
 def projection_tiers_table(backtest: dict) -> str:
     """Projected vs. actual RAPTOR by tier — a calibration analogue."""
     rows = []

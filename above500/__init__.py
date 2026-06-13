@@ -32,7 +32,8 @@ MODELS = [
         "name": "NBA RAPTOR Player Ratings",
         "league": "NBA",
         "description": "FiveThirtyEight's RAPTOR plus-minus and WAR for every player "
-                       "since 1977, with a backtested next-season projection.",
+                       "since 1977, extended past 538's run with a calibrated "
+                       "Box-RAPTOR estimate and a next-season projection.",
         "color": "#30a2da",
         "href": "forecasts/nba-raptor.qmd",
     },

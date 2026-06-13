@@ -25,6 +25,7 @@ from __future__ import annotations
 import csv
 import gzip
 import math
+import unicodedata
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -210,82 +211,185 @@ def _backtest(params: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# site payload
+# extension: merge 538's official RAPTOR with recent Box-RAPTOR estimates
 # ---------------------------------------------------------------------------
+
+POSS_PER_MIN = 2.1   # rough possessions per player-minute, to weight estimates
+
 
 def _career_history(player_id: str) -> list[float]:
     return [round(s["raptor_total"], 1) for s in _by_player()[player_id]
             if s["raptor_total"] is not None]
 
 
+def _norm_name(name: str) -> str:
+    n = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode().lower()
+    n = n.replace(".", "").replace("'", "")
+    drop = {"jr", "sr", "ii", "iii", "iv", "v"}
+    return " ".join(t for t in n.replace("-", " ").split() if t not in drop)
+
+
+@lru_cache(maxsize=1)
+def _official_careers_by_name() -> dict[str, list[dict]]:
+    """Official RAPTOR seasons keyed by normalized name (for the merge)."""
+    careers: dict[str, list[dict]] = {}
+    for s in _load_players():
+        if s["raptor_total"] is None:
+            continue
+        careers.setdefault(_norm_name(s["player_name"]), []).append(
+            {"season": s["season"], "raptor_total": s["raptor_total"],
+             "poss": s["poss"]})
+    for c in careers.values():
+        c.sort(key=lambda s: s["season"])
+    return careers
+
+
+def _label(season: int) -> str:
+    return f"{season - 1}-{str(season)[2:]}"
+
+
+@lru_cache(maxsize=1)
+def _recent_estimates():
+    """estimate_recent() grouped by season, isolated so any failure is a no-op."""
+    try:
+        from above500 import raptor_box
+        return raptor_box.estimate_recent(), raptor_box.fidelity_backtest()
+    except Exception:
+        return [], None
+
+
+def _merged_history(name: str, recent_by_name: dict[str, list[dict]]) -> list[float]:
+    """A player's RAPTOR sparkline: official seasons then estimated ones."""
+    norm = _norm_name(name)
+    hist = [(s["season"], s["raptor_total"]) for s in
+            _official_careers_by_name().get(norm, [])]
+    hist += [(e["season"], e["raptor_total"]) for e in recent_by_name.get(norm, [])]
+    hist.sort()
+    return [round(v, 1) for _, v in hist]
+
+
+# ---------------------------------------------------------------------------
+# site payload
+# ---------------------------------------------------------------------------
+
 @lru_cache(maxsize=1)
 def forecast() -> dict:
     players = _load_players()
-    last_season = max(s["season"] for s in players)
-    season_label = f"{last_season - 1}-{str(last_season)[2:]}"
-
+    official_last = max(s["season"] for s in players)
     params = _fit()
     backtest = _backtest(params)
+    estimates, fidelity = _recent_estimates()
 
-    # leaderboard: the final RAPTOR season, best by WAR
-    leaders = sorted(
-        (s for s in players if s["season"] == last_season and s["war_total"] is not None),
-        key=lambda s: s["war_total"], reverse=True)[:25]
-    leaderboard = [{
-        "name": s["player_name"],
-        "mp": s["mp"],
-        "off": round(s["raptor_offense"], 1) if s["raptor_offense"] is not None else None,
-        "dfn": round(s["raptor_defense"], 1) if s["raptor_defense"] is not None else None,
-        "raptor": round(s["raptor_total"], 1) if s["raptor_total"] is not None else None,
-        "war": round(s["war_total"], 1),
-        "history": _career_history(s["player_id"]),
-    } for s in leaders]
+    recent_by_name: dict[str, list[dict]] = {}
+    for e in estimates:
+        recent_by_name.setdefault(_norm_name(e["name"]), []).append(e)
 
-    # forward projection: every player active in the final season, projected
-    # one season ahead from everything through that season
+    estimated = bool(estimates)
+    last_season = max((e["season"] for e in estimates), default=official_last)
+    season_label = _label(last_season)
+
+    # headline leaderboard: the most recent season available, best by WAR
+    if estimated:
+        latest = sorted((e for e in estimates if e["season"] == last_season),
+                        key=lambda e: e["war"], reverse=True)[:25]
+        leaderboard = [{
+            "name": e["name"], "mp": round(e["min"]),
+            "off": round(e["raptor_off"], 1), "dfn": round(e["raptor_def"], 1),
+            "raptor": round(e["raptor_total"], 1), "war": round(e["war"], 1),
+            "history": _merged_history(e["name"], recent_by_name),
+        } for e in latest]
+    else:
+        latest = sorted((s for s in players if s["season"] == last_season
+                         and s["war_total"] is not None),
+                        key=lambda s: s["war_total"], reverse=True)[:25]
+        leaderboard = [{
+            "name": s["player_name"], "mp": s["mp"],
+            "off": round(s["raptor_offense"], 1),
+            "dfn": round(s["raptor_defense"], 1),
+            "raptor": round(s["raptor_total"], 1), "war": round(s["war_total"], 1),
+            "history": _career_history(s["player_id"]),
+        } for s in latest]
+
+    # forward projection: players active in the latest season, one season ahead
     proj_season = last_season + 1
-    proj_label = f"{proj_season - 1}-{str(proj_season)[2:]}"
-    projections = []
-    for career in _by_player().values():
-        if career[-1]["season"] != last_season or career[-1]["poss"] < MIN_TARGET_POSS:
-            continue
-        pr = _project(career, params["decay"], params["k"], params["r"])
-        if pr is None:
-            continue
-        projections.append({
-            "name": career[-1]["player_name"],
-            "last": round(career[-1]["raptor_total"], 1),
-            "proj": round(pr, 1),
-            "history": _career_history(career[-1]["player_id"]),
-        })
-    projections.sort(key=lambda p: p["proj"], reverse=True)
-    projections = projections[:15]
+    projections = _projections(last_season, recent_by_name, params, estimated)
 
     return {
         "slug": "nba-raptor",
         "name": "NBA RAPTOR Player Ratings",
         "league": "NBA",
-        "season": f"{season_label} (final RAPTOR season)",
+        "season": f"through {season_label}" + (" (estimated)" if estimated else ""),
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "data_through": season_label,
-        "description": f"FiveThirtyEight's RAPTOR plus-minus ratings and wins above "
-                       f"replacement for every NBA player-season from 1976-77 through "
-                       f"{season_label}, with a next-season projection model backtested "
-                       f"out-of-sample on {backtest['n']:,} seasons since {TEST_FROM}.",
+        "estimated": estimated,
+        "official_through": _label(official_last),
+        "description": "FiveThirtyEight's RAPTOR plus-minus ratings and wins above "
+                       "replacement for every NBA player since 1976-77, with 538's run "
+                       f"(through {_label(official_last)}) extended to {season_label} by "
+                       "a Box-RAPTOR estimate and a next-season projection."
+        if estimated else
+        "FiveThirtyEight's RAPTOR plus-minus ratings and wins above replacement for "
+        f"every NBA player-season from 1976-77 through {season_label}.",
         "methodology": "RAPTOR is FiveThirtyEight's player plus-minus: points per 100 "
                        "possessions a player adds above league average on offense and "
-                       "defense, rolled into wins above replacement. The descriptive "
-                       "ratings here are 538's own (their CC BY 4.0 dataset, 1976-77 "
-                       "through 2021-22). The projection forecasts a player's next-season "
-                       "RAPTOR from a recency- and possession-weighted blend of recent "
-                       "seasons, regressed toward replacement level by a shrinkage that "
-                       "eases as the sample grows; its parameters were fit on seasons "
-                       f"through {TRAIN_THROUGH} and evaluated, fixed, on {TEST_FROM} "
-                       "onward. Every projection uses only earlier seasons, so the "
-                       "backtest is out-of-sample.",
+                       "defense, rolled into wins above replacement. The ratings through "
+                       f"{_label(official_last)} are 538's own (CC BY 4.0). 538 retired "
+                       "RAPTOR after 2021-22, so later seasons use Box-RAPTOR — a "
+                       "ridge-regression reconstruction of RAPTOR's box-score component, "
+                       "trained on 538's own box-stats-to-RAPTOR data and calibrated per "
+                       "season; box scores can't see RAPTOR's on/off half, so the estimate "
+                       "is deliberately conservative at the extremes. The projection "
+                       "forecasts a player's next-season RAPTOR from a recency- and "
+                       "possession-weighted blend regressed toward replacement level, fit "
+                       f"on seasons through {TRAIN_THROUGH} and evaluated out-of-sample "
+                       f"on {TEST_FROM} onward."
+        if estimated else
+        "RAPTOR is FiveThirtyEight's player plus-minus, rolled into wins above "
+        "replacement. The projection forecasts next-season RAPTOR from a recency- and "
+        "possession-weighted blend regressed toward replacement level, fit through "
+        f"{TRAIN_THROUGH} and evaluated out-of-sample on {TEST_FROM} onward.",
         "season_label": season_label,
-        "proj_label": proj_label,
+        "proj_label": _label(proj_season),
         "leaderboard": leaderboard,
         "projections": projections,
         "backtest": backtest,
+        "fidelity": fidelity,
     }
+
+
+def _projections(last_season: int, recent_by_name: dict[str, list[dict]],
+                 params: dict, estimated: bool) -> list[dict]:
+    """Project the season after `last_season` for everyone active in it."""
+    if estimated:
+        careers: dict[str, list[dict]] = {}
+        for norm, seasons in _official_careers_by_name().items():
+            careers[norm] = [dict(s) for s in seasons]
+        for norm, ests in recent_by_name.items():
+            careers.setdefault(norm, []).extend(
+                {"season": e["season"], "raptor_total": e["raptor_total"],
+                 "poss": e["min"] * POSS_PER_MIN, "name": e["name"]} for e in ests)
+        rows = []
+        for c in careers.values():
+            c.sort(key=lambda s: s["season"])
+            if c[-1]["season"] != last_season or c[-1]["poss"] < MIN_TARGET_POSS:
+                continue
+            pr = _project(c, params["decay"], params["k"], params["r"])
+            if pr is None:
+                continue
+            rows.append({"name": c[-1].get("name") or c[-1].get("player_name"),
+                         "last": round(c[-1]["raptor_total"], 1), "proj": round(pr, 1),
+                         "history": _merged_history(c[-1].get("name", ""), recent_by_name)})
+    else:
+        rows = []
+        for career in _by_player().values():
+            if career[-1]["season"] != last_season or career[-1]["poss"] < MIN_TARGET_POSS:
+                continue
+            pr = _project(career, params["decay"], params["k"], params["r"])
+            if pr is None:
+                continue
+            rows.append({"name": career[-1]["player_name"],
+                         "last": round(career[-1]["raptor_total"], 1),
+                         "proj": round(pr, 1),
+                         "history": _career_history(career[-1]["player_id"])})
+    rows.sort(key=lambda p: p["proj"], reverse=True)
+    return rows[:15]
