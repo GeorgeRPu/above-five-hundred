@@ -1,0 +1,44 @@
+name: Refresh World Cup roster snapshot
+
+# Pulls current squads from API-Football and commits the roster snapshot.
+# Kept separate from the deploy workflow so renders stay offline and the
+# free tier's 100-requests/day limit only applies to this occasional job.
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Mondays, before the daily render
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-roster
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch roster snapshot
+        env:
+          APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
+        run: python3 scripts/fetch_roster.py
+
+      - name: Commit if changed
+        run: |
+          if [ -n "$(git status --porcelain above500/data/roster_ratings.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add above500/data/roster_ratings.json
+            git commit -m "Refresh World Cup roster snapshot"
+            git push
+          else
+            echo "No roster changes."
+          fi

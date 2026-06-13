@@ -132,9 +132,24 @@ from a Poisson goal model on those ratings; backtested on ~30,000
 matches since 1994 (59.1% three-way accuracy, 0.521 multiclass Brier vs
 0.631 for base rates).
 
-Unlike 538's World Cup SPI, this uses only the match-based component —
-their model blended in 25% roster-based ratings derived from club
-football, which needs club data that isn't openly available.
+Following 538, the ratings can blend 25% toward a **roster-strength
+prior** built from current squads' club form (via API-Football). This
+nudges aging squads down and young, deep squads up — the correction a
+results-only model misses. The blend activates only when a roster
+snapshot is present; otherwise the model runs match-only.
+
+**Enabling the roster blend** (two manual steps):
+
+1. Get a free key at dashboard.api-football.com and add it as the GitHub
+   Actions secret `APIFOOTBALL_KEY`.
+2. Allowlist `v3.football.api-sports.io` in the environment's network
+   egress settings.
+
+Then run the **Refresh World Cup roster snapshot** workflow (or
+`APIFOOTBALL_KEY=... python3 scripts/fetch_roster.py` locally). It pulls
+the 48 squads and commits `above500/data/roster_ratings.json`, which the
+SPI model reads offline at render time. The snapshot refreshes weekly;
+the free tier's 100-requests/day limit only applies to that pull.
 
 Tournament odds come from 10,000 Monte Carlo runs of the real 2026
 bracket: the actual group fixtures (groups are derived from the fixture
