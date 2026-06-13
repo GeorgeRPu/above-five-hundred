@@ -54,26 +54,43 @@ SEARCH_QUERY = {
     "South Korea": "Korea Republic", "United States": "USA",
     "DR Congo": "Congo", "Ivory Coast": "Ivory Coast", "Iran": "Iran",
     "Curaçao": "Curacao", "Czech Republic": "Czechia",
+    "Bosnia and Herzegovina": "Bosnia",
 }
 
 _requests = 0
+_stop = False     # set when the daily quota / rate limit is hit
 
 
 def _api(path: str, **params) -> dict:
-    global _requests
+    global _requests, _stop
     _requests += 1
     url = f"{BASE}/{path}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"x-apisports-key": API_KEY})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        data = json.loads(resp.read())
-    if data.get("errors"):
-        print(f"  API errors for {path}({params}): {data['errors']}")
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            print("  hit rate/daily limit (429) — stopping; progress is saved.")
+            _stop = True
+        else:
+            print(f"  HTTP {e.code} for {path}({params})")
+        return {}
+    except Exception as e:  # noqa: BLE001
+        print(f"  request failed for {path}({params}): {e}")
+        return {}
+    errs = data.get("errors")
+    if errs:
+        print(f"  API errors for {path}({params}): {errs}")
+        # API-Football also reports quota exhaustion in the body
+        if isinstance(errs, dict) and any(k in errs for k in ("rateLimit", "requests")):
+            _stop = True
     time.sleep(REQUEST_PAUSE)
     return data
 
 
 def _budget_left() -> bool:
-    return _requests < MAX_REQUESTS
+    return not _stop and _requests < MAX_REQUESTS
 
 
 def _age_weight(age: int | None) -> float:
@@ -154,10 +171,15 @@ def save_snapshot(snap: dict) -> None:
 
 
 def main() -> None:
+    global MAX_REQUESTS
     status = _api("status").get("response", {}) or {}
+    reqs = status.get("requests", {}) or {}
+    current, limit = reqs.get("current") or 0, reqs.get("limit_day") or 100
     print(f"account: plan={status.get('subscription', {}).get('plan')} "
-          f"requests today={status.get('requests', {}).get('current')}/"
-          f"{status.get('requests', {}).get('limit_day')}")
+          f"requests today={current}/{limit}")
+    # Respect the daily quota across runs: never start more than today's remainder.
+    MAX_REQUESTS = max(0, min(MAX_REQUESTS, limit - current - 2))
+    print(f"this run will make up to ~{MAX_REQUESTS} requests")
 
     snap = load_snapshot()
     ids = snap.setdefault("team_ids", {})

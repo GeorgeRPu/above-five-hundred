@@ -6,7 +6,10 @@ name: Refresh World Cup roster snapshot
 
 on:
   schedule:
-    - cron: "0 9 * * 1" # Mondays, before the daily render
+    # Daily after the API-Football quota resets (00:00 UTC); the fetch is
+    # incremental and quota-aware, so it fills over a couple of days then
+    # makes only a few cheap requests once complete.
+    - cron: "0 1 * * *"
   workflow_dispatch:
 
 permissions:
