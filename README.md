@@ -132,24 +132,22 @@ from a Poisson goal model on those ratings; backtested on ~30,000
 matches since 1994 (59.1% three-way accuracy, 0.521 multiclass Brier vs
 0.631 for base rates).
 
-Following 538, the ratings can blend 25% toward a **roster-strength
-prior** built from current squads' club form (via API-Football). This
-nudges aging squads down and young, deep squads up — the correction a
-results-only model misses. The blend activates only when a roster
-snapshot is present; otherwise the model runs match-only.
+Following 538, the ratings blend 25% toward a **roster-strength prior**
+built from EA Sports FC 26 player ratings (an age-weighted mean of each
+nation's best 23 overalls). This nudges ageing squads down and young,
+deep squads up — the correction a results-only model misses. With the
+blend, Argentina drops from 22% to 16% and Spain/England/France/Germany
+all rise, matching observer consensus far better.
 
-**Enabling the roster blend** (two manual steps):
-
-1. Get a free key at dashboard.api-football.com and add it as the GitHub
-   Actions secret `APIFOOTBALL_KEY`.
-2. Allowlist `v3.football.api-sports.io` in the environment's network
-   egress settings.
-
-Then run the **Refresh World Cup roster snapshot** workflow (or
-`APIFOOTBALL_KEY=... python3 scripts/fetch_roster.py` locally). It pulls
-the 48 squads and commits `above500/data/roster_ratings.json`, which the
-SPI model reads offline at render time. The snapshot refreshes weekly;
-the free tier's 100-requests/day limit only applies to that pull.
+The prior comes from [EAFC26-DataHub](https://github.com/ismailoksuz/EAFC26-DataHub),
+which commits the full FC 26 database to GitHub — so `scripts/fetch_roster.py`
+builds the snapshot from one unauthenticated fetch (no API key, no rate
+limit). It writes the derived per-nation aggregate to
+`above500/data/roster_ratings.json` (just the 48 numbers, not EA's player
+rows), which the SPI model reads at render time. The **Refresh World Cup
+roster snapshot** workflow rebuilds it weekly. The blend is a no-op until
+the snapshot covers at least half the field, so the model degrades
+cleanly to match-only.
 
 Tournament odds come from 10,000 Monte Carlo runs of the real 2026
 bracket: the actual group fixtures (groups are derived from the fixture
