@@ -54,7 +54,11 @@ def _api(path: str, **params) -> dict:
     url = f"{BASE}/{path}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"x-apisports-key": API_KEY})
     with urllib.request.urlopen(req, timeout=60) as resp:
-        return json.loads(resp.read())
+        data = json.loads(resp.read())
+    errors = data.get("errors")
+    if errors:
+        print(f"  API errors for {path}({params}): {errors}")
+    return data
 
 
 def _age_weight(age: int | None) -> float:
@@ -122,8 +126,20 @@ def fetch_roster(team_id: int) -> dict:
 
 
 def main() -> None:
+    # Diagnostics: confirm the key works and the World Cup is in this plan's coverage.
+    status = _api("status").get("response", {})
+    sub = (status or {}).get("subscription", {})
+    reqs = (status or {}).get("requests", {})
+    print(f"account: plan={sub.get('plan')} active={sub.get('active')} "
+          f"requests={reqs.get('current')}/{reqs.get('limit_day')}/day")
+    wc = _api("leagues", id=WC_LEAGUE, season=WC_SEASON).get("response", [])
+    print(f"World Cup league lookup (id={WC_LEAGUE}, season={WC_SEASON}): "
+          f"{len(wc)} result(s)" + (f" -> {wc[0]['league']['name']}" if wc else " (not in plan?)"))
+
     ids = fetch_team_ids()
     print(f"matched {len(ids)}/48 nations")
+    if not ids:
+        sys.exit("No teams returned — see API errors / coverage above; not writing snapshot.")
     missing = sorted(set(FIFA_CODES) - set(ids))
     if missing:
         print("UNMATCHED (add to NAME_FIXUPS):", missing)
