@@ -1,18 +1,26 @@
-"""International football Elo and a 2026 FIFA World Cup forecast.
+"""Soccer Power Index (SPI) ratings and a 2026 FIFA World Cup forecast.
 
-Data: martj42/international_results (CC0) — every men's full
-international since 1872, updated daily, including the 2026 World Cup
-fixture list (rows with NA scores carry the real groups and venues).
-A snapshot is committed at above500/data/intl_results.csv.gz; at render
-time the model re-fetches the upstream file so odds update as the
-tournament is played.
+This follows the FiveThirtyEight / Nate Silver SPI approach rather than a
+single-number Elo: every national team carries two ratings —
 
-Ratings follow World Football Elo conventions: K scaled by match
-importance (World Cup 60 ... friendlies 20), a goal-difference
-multiplier, 100 points of home advantage for non-neutral venues, and
-draws scored as half a win. Match win/draw/loss probabilities come from
-a two-parameter Poisson goal model fitted to the rating gap, which also
-drives the Monte Carlo tournament simulation.
+  * an **offensive** rating: goals it would be expected to score against
+    an average team on a neutral field, and
+  * a **defensive** rating: goals it would be expected to concede.
+
+Ratings are fit online from goals scored and conceded (stochastic
+gradient ascent on a Poisson attack/defence model), with the learning
+rate scaled by match importance. Match win/draw/loss probabilities and
+simulated scorelines come from the implied expected goals; tournament
+odds come from Monte Carlo of the real 48-team bracket.
+
+The headline **SPI** is, as 538 defined it, the share of points a team
+would take against an average team over many neutral matches (a win is
+worth 3 points, a draw 1), scaled to 0-100.
+
+Difference from 538: their World Cup SPI blended 75% match-based ratings
+with 25% roster-based ratings derived from club football. We use only
+the match-based component, since the club/roster database isn't openly
+available. Data: martj42/international_results (CC0), updated daily.
 """
 
 from __future__ import annotations
@@ -34,15 +42,15 @@ LIVE_URL = "https://raw.githubusercontent.com/martj42/international_results/mast
 LIVE_CACHE = Path(os.environ.get("TMPDIR", "/tmp")) / "above500_intl_results.csv"
 LIVE_CACHE_MAX_AGE = 6 * 3600  # the source updates daily during the World Cup
 
-INITIAL_RATING = 1500.0
-HOME_ADVANTAGE = 100.0
-GOAL_MODEL_FROM = "1990-01-01"   # fit scoring rates on the modern era
+K_BASE = 0.05            # base learning rate for the online attack/defence fit
+GOAL_CAP = 6             # cap goals when updating, to limit blowout influence
+GOAL_MODEL_FROM = "1990-01-01"   # window for the league-average goal baselines
 BACKTEST_FROM = "1994-01-01"     # 3-points-for-a-win era
 N_SIMULATIONS = 10_000
 WC_START = "2026-06-01"
 
-# Group letters keyed by an anchor team (groups themselves come from the
-# fixture graph; letters match the official draw)
+# Group letters keyed by an anchor team (groups come from the fixture
+# graph; the letters match the official draw)
 GROUP_ANCHORS = {
     "Mexico": "A", "Canada": "B", "Brazil": "C", "United States": "D",
     "Germany": "E", "Netherlands": "F", "Belgium": "G", "Spain": "H",
@@ -75,29 +83,55 @@ MAJOR_FINALS = ("uefa euro", "copa américa", "african cup of nations",
                 "afc asian cup", "concacaf championship", "gold cup")
 
 
-def elo_win_prob(diff: float) -> float:
-    return 1.0 / (1.0 + 10 ** (-diff / 400.0))
-
-
-def k_factor(tournament: str) -> float:
+def _importance(tournament: str) -> float:
     t = tournament.lower()
     if t == "fifa world cup":
-        return 60.0
+        return 1.3
     if "qualification" in t:
-        return 40.0
-    if any(name in t for name in MAJOR_FINALS):
-        return 50.0
-    if t == "friendly":
-        return 20.0
-    return 30.0
-
-
-def _gd_multiplier(margin: int) -> float:
-    if margin <= 1:
         return 1.0
-    if margin == 2:
-        return 1.5
-    return (11 + margin) / 8.0
+    if any(name in t for name in MAJOR_FINALS):
+        return 1.1
+    if t == "friendly":
+        return 0.6
+    return 0.85
+
+
+# ---------------------------------------------------------------------------
+# Poisson goal model
+# ---------------------------------------------------------------------------
+
+def _poisson_pmf(lam: float, kmax: int = 10) -> list[float]:
+    out, p = [], math.exp(-lam)
+    for k in range(kmax + 1):
+        out.append(p)
+        p *= lam / (k + 1)
+    return out
+
+
+def outcome_probs(lam_h: float, lam_a: float, max_goals: int = 10):
+    """(P home win, P draw, P away win) from independent Poisson scores."""
+    ph = _poisson_pmf(lam_h, max_goals)
+    pa = _poisson_pmf(lam_a, max_goals)
+    win = draw = loss = 0.0
+    for i, pi in enumerate(ph):
+        for j, pj in enumerate(pa):
+            p = pi * pj
+            if i > j:
+                win += p
+            elif i == j:
+                draw += p
+            else:
+                loss += p
+    total = win + draw + loss
+    return win / total, draw / total, loss / total
+
+
+def _spi(off: float, dfn: float, neutral: float) -> float:
+    """Points share (×100) vs an average team on a neutral field."""
+    lam_for = math.exp(neutral + off)
+    lam_against = math.exp(neutral - dfn)
+    pw, pd, _ = outcome_probs(lam_for, lam_against)
+    return (3 * pw + pd) / 3 * 100
 
 
 # ---------------------------------------------------------------------------
@@ -105,7 +139,7 @@ def _gd_multiplier(margin: int) -> float:
 # ---------------------------------------------------------------------------
 
 def _parse(text_lines) -> tuple[list[dict], list[dict]]:
-    """Split rows into (played matches, upcoming WC fixtures)."""
+    """Split rows into (played matches, upcoming World Cup fixtures)."""
     played, fixtures = [], []
     for r in csv.DictReader(text_lines):
         row = {
@@ -133,7 +167,7 @@ def _load() -> tuple[list[dict], list[dict]]:
             with urllib.request.urlopen(LIVE_URL, timeout=60) as resp:
                 LIVE_CACHE.write_bytes(resp.read())
         played, fixtures = _parse(io.StringIO(LIVE_CACHE.read_text()))
-        if played:  # sanity: live file parsed and non-empty
+        if played:
             return played, fixtures
     except Exception:
         pass
@@ -142,106 +176,77 @@ def _load() -> tuple[list[dict], list[dict]]:
 
 
 # ---------------------------------------------------------------------------
-# goal model: goals ~ Poisson(exp(a + b * rating gap))
+# ratings: online attack/defence fit
 # ---------------------------------------------------------------------------
 
-def _fit_goal_model(observations: list[tuple[float, int]]) -> tuple[float, float]:
-    """Two-parameter Poisson regression by Newton's method."""
-    a, b = 0.0, 0.5
-    for _ in range(25):
-        g_a = g_b = h_aa = h_ab = h_bb = 0.0
-        for x, y in observations:
-            mu = math.exp(a + b * x)
-            g_a += y - mu
-            g_b += (y - mu) * x
-            h_aa += mu
-            h_ab += mu * x
-            h_bb += mu * x * x
-        det = h_aa * h_bb - h_ab * h_ab
-        if abs(det) < 1e-12:
-            break
-        da = (g_a * h_bb - g_b * h_ab) / det
-        db = (g_b * h_aa - g_a * h_ab) / det
-        a, b = a + da, b + db
-        if abs(da) < 1e-10 and abs(db) < 1e-10:
-            break
-    return a, b
+def _mean(xs: list[int]) -> float:
+    return sum(xs) / len(xs)
 
-
-def goal_rates(diff: float, a: float, b: float) -> tuple[float, float]:
-    """Expected goals for and against, given a rating advantage `diff`."""
-    x = diff / 400.0
-    return math.exp(a + b * x), math.exp(a - b * x)
-
-
-def outcome_probs(diff: float, a: float, b: float, max_goals: int = 10):
-    """(P home win, P draw, P away win) from independent Poisson scores."""
-    lam_h, lam_a = goal_rates(diff, a, b)
-    ph = [math.exp(-lam_h) * lam_h ** k / math.factorial(k) for k in range(max_goals + 1)]
-    pa = [math.exp(-lam_a) * lam_a ** k / math.factorial(k) for k in range(max_goals + 1)]
-    win = draw = loss = 0.0
-    for i, pi in enumerate(ph):
-        for j, pj in enumerate(pa):
-            p = pi * pj
-            if i > j:
-                win += p
-            elif i == j:
-                draw += p
-            else:
-                loss += p
-    total = win + draw + loss
-    return win / total, draw / total, loss / total
-
-
-# ---------------------------------------------------------------------------
-# ratings + backtest
-# ---------------------------------------------------------------------------
 
 @lru_cache(maxsize=1)
 def _run() -> dict:
     played, fixtures = _load()
 
-    ratings: dict[str, float] = {}
-    goal_obs: list[tuple[float, int]] = []
-    history: dict[str, list[float]] = {}
-    raw_predictions = []   # (date, diff, outcome 'H'/'D'/'A')
+    # League-average goal baselines (home / away / neutral), modern era.
+    hg, ag, ng = [], [], []
+    for m in played:
+        if m["date"] < GOAL_MODEL_FROM:
+            continue
+        if m["neutral"]:
+            ng += [m["home_goals"], m["away_goals"]]
+        else:
+            hg.append(m["home_goals"])
+            ag.append(m["away_goals"])
+    HOME, AWAY, NEUTRAL = math.log(_mean(hg)), math.log(_mean(ag)), math.log(_mean(ng))
 
+    off: dict[str, float] = {}   # log offensive strength
+    dfn: dict[str, float] = {}   # log defensive strength
     wc_teams = {m["home"] for m in fixtures} | {m["away"] for m in fixtures}
+    history_raw: dict[str, list[tuple[float, float]]] = {}
+    raw_predictions = []         # (lam_home, lam_away, outcome)
 
     for m in played:
-        r_h = ratings.setdefault(m["home"], INITIAL_RATING)
-        r_a = ratings.setdefault(m["away"], INITIAL_RATING)
-        bonus = 0.0 if m["neutral"] else HOME_ADVANTAGE
-        diff = (r_h + bonus) - r_a
+        h, a = m["home"], m["away"]
+        ao_h = off.setdefault(h, 0.0); ad_h = dfn.setdefault(h, 0.0)
+        ao_a = off.setdefault(a, 0.0); ad_a = dfn.setdefault(a, 0.0)
+        base_h = NEUTRAL if m["neutral"] else HOME
+        base_a = NEUTRAL if m["neutral"] else AWAY
+        lam_h = math.exp(base_h + ao_h - ad_a)
+        lam_a = math.exp(base_a + ao_a - ad_h)
 
-        if m["date"] >= GOAL_MODEL_FROM:
-            x = diff / 400.0
-            goal_obs.append((x, m["home_goals"]))
-            goal_obs.append((-x, m["away_goals"]))
         if m["date"] >= BACKTEST_FROM:
             outcome = ("H" if m["home_goals"] > m["away_goals"]
                        else "A" if m["home_goals"] < m["away_goals"] else "D")
-            raw_predictions.append((m["date"], diff, outcome))
+            raw_predictions.append((lam_h, lam_a, outcome))
 
-        expected = elo_win_prob(diff)
-        actual = (1.0 if m["home_goals"] > m["away_goals"]
-                  else 0.0 if m["home_goals"] < m["away_goals"] else 0.5)
-        margin = abs(m["home_goals"] - m["away_goals"])
-        shift = k_factor(m["tournament"]) * _gd_multiplier(margin) * (actual - expected)
-        ratings[m["home"]] = r_h + shift
-        ratings[m["away"]] = r_a - shift
+        # stochastic gradient step on the Poisson log-likelihood
+        gh, ga = min(m["home_goals"], GOAL_CAP), min(m["away_goals"], GOAL_CAP)
+        k = K_BASE * _importance(m["tournament"])
+        eh, ea = gh - lam_h, ga - lam_a
+        off[h] = ao_h + k * eh
+        dfn[a] = ad_a - k * eh
+        off[a] = ao_a + k * ea
+        dfn[h] = ad_h - k * ea
 
         if m["date"] >= "2024-06-01":
-            for team in (m["home"], m["away"]):
-                if team in wc_teams:
-                    history.setdefault(team, []).append(round(ratings[team], 1))
+            for t in (h, a):
+                if t in wc_teams:
+                    history_raw.setdefault(t, []).append((off[t], dfn[t]))
 
-    a, b = _fit_goal_model(goal_obs)
+    # The fit only identifies rating *differences*, so the absolute zero is a
+    # free gauge. Anchor it on the World Cup field: SPI/Off/Def are expressed
+    # relative to an average team in this tournament. This is display-only —
+    # match probabilities and the simulation use the raw (gauge-invariant)
+    # rating differences and are unaffected.
+    gauge = sum((off[t] + dfn[t]) / 2 for t in wc_teams) / len(wc_teams)
+    history = {t: [round(_spi(o - gauge, d - gauge, NEUTRAL), 1) for o, d in snaps]
+               for t, snaps in history_raw.items()}
+
     return {
-        "ratings": ratings,
+        "off": off, "dfn": dfn, "gauge": gauge,
+        "HOME": HOME, "AWAY": AWAY, "NEUTRAL": NEUTRAL,
         "fixtures": fixtures,
         "history": history,
-        "goal_params": (a, b),
         "raw_predictions": raw_predictions,
         "n_played": len(played),
         "data_through": played[-1]["date"],
@@ -250,8 +255,11 @@ def _run() -> dict:
     }
 
 
-def _score3(rows: list[tuple[tuple[float, float, float], str]]) -> dict:
-    """Multiclass accuracy/Brier for ((pH,pD,pA), outcome) rows."""
+# ---------------------------------------------------------------------------
+# backtest
+# ---------------------------------------------------------------------------
+
+def _score3(rows) -> dict:
     n = len(rows)
     classes = "HDA"
     correct = brier = logloss = 0.0
@@ -261,21 +269,19 @@ def _score3(rows: list[tuple[tuple[float, float, float], str]]) -> dict:
         for i, c in enumerate(classes):
             brier += (probs[i] - (1.0 if outcome == c else 0.0)) ** 2
         logloss -= math.log(max(probs[classes.index(outcome)], 1e-12))
-    return {"n": n, "accuracy": correct / n, "brier": brier / n,
-            "logloss": logloss / n}
+    return {"n": n, "accuracy": correct / n, "brier": brier / n, "logloss": logloss / n}
 
 
 def _backtest(run: dict) -> dict:
-    a, b = run["goal_params"]
-    ours = [(outcome_probs(diff, a, b), outcome) for _, diff, outcome in run["raw_predictions"]]
+    ours = [(outcome_probs(lh, la), o) for lh, la, o in run["raw_predictions"]]
     counts = {"H": 0, "D": 0, "A": 0}
-    for _, outcome in ours:
-        counts[outcome] += 1
+    for _, o in ours:
+        counts[o] += 1
     n = len(ours)
     base = (counts["H"] / n, counts["D"] / n, counts["A"] / n)
 
     models = [
-        {"model": "Above .500 Elo + Poisson", **_score3(ours)},
+        {"model": "Above .500 SPI", **_score3(ours)},
         {"model": f"Base rates ({base[0]:.0%}/{base[1]:.0%}/{base[2]:.0%})",
          **_score3([(base, o) for _, o in ours])},
         {"model": "Uniform (⅓ each)",
@@ -337,18 +343,34 @@ def _poisson_sample(rng: random.Random, lam: float) -> int:
 
 def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
     rng = random.Random(2026)
-    ratings = run["ratings"]
+    off, dfn = run["off"], run["dfn"]
+    NEUTRAL, HOME, AWAY = run["NEUTRAL"], run["HOME"], run["AWAY"]
     fixtures = run["fixtures"]
-    a, b = run["goal_params"]
     groups = _derive_groups(fixtures)
     group_of = {t: g for g, members in groups.items() for t in members}
+    teams = sorted(group_of)
+
+    def xg(home, away, neutral):
+        bh = NEUTRAL if neutral else HOME
+        ba = NEUTRAL if neutral else AWAY
+        return (math.exp(bh + off[home] - dfn[away]),
+                math.exp(ba + off[away] - dfn[home]))
+
+    def advance(t1, t2, rng):
+        """Knockout: sample a neutral scoreline; resolve draws by win share."""
+        l1, l2 = xg(t1, t2, True)
+        g1, g2 = _poisson_sample(rng, l1), _poisson_sample(rng, l2)
+        if g1 > g2:
+            return t1
+        if g2 > g1:
+            return t2
+        pw, _, pl = outcome_probs(l1, l2)
+        return t1 if rng.random() < pw / (pw + pl) else t2
 
     # completed WC matches feed the sim as fixed results
-    fixed = {}
-    for m in run["wc_results"]:
-        fixed[(m["home"], m["away"])] = (m["home_goals"], m["away_goals"])
+    fixed = {(m["home"], m["away"]): (m["home_goals"], m["away_goals"])
+             for m in run["wc_results"]}
 
-    teams = sorted(group_of)
     tally = {t: {"r32": 0, "qf": 0, "sf": 0, "final": 0, "title": 0} for t in teams}
 
     for _ in range(n_sims):
@@ -361,9 +383,8 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
             if key in fixed:
                 hg, ag = fixed[key]
             else:
-                bonus = 0.0 if m["neutral"] else HOME_ADVANTAGE
-                lam_h, lam_a = goal_rates((ratings[m["home"]] + bonus) - ratings[m["away"]], a, b)
-                hg, ag = _poisson_sample(rng, lam_h), _poisson_sample(rng, lam_a)
+                lh, la = xg(m["home"], m["away"], m["neutral"])
+                hg, ag = _poisson_sample(rng, lh), _poisson_sample(rng, la)
             h, w = m["home"], m["away"]
             gd[h] += hg - ag; gd[w] += ag - hg
             gf[h] += hg; gf[w] += ag
@@ -381,19 +402,18 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
         for g, members in groups.items():
             order = sorted(members, key=table_key, reverse=True)
             winners[g], runners[g] = order[0], order[1]
-            thirds.append((order[2], g))
-        thirds.sort(key=lambda tg: table_key(tg[0]), reverse=True)
+            thirds.append(order[2])
+        thirds.sort(key=table_key, reverse=True)
         best_thirds = thirds[:8]
 
-        qualified = set(winners.values()) | set(runners.values()) | {t for t, _ in best_thirds}
-        for t in qualified:
+        for t in set(winners.values()) | set(runners.values()) | set(best_thirds):
             tally[t]["r32"] += 1
 
-        # Round of 32. Real slotting follows FIFA's 495-scenario allocation
+        # Round of 32. Real third-place slotting follows FIFA's 495-scenario
         # table; we keep the fixed structure (which winners face thirds vs
-        # runners-up) and randomize identities within it, avoiding
-        # same-group rematches.
-        third_pool = [t for t, _ in best_thirds]
+        # runners-up) and randomize identities within it, avoiding same-group
+        # rematches.
+        third_pool = best_thirds[:]
         for _ in range(50):
             rng.shuffle(third_pool)
             if all(group_of[third_pool[i]] != g
@@ -413,19 +433,10 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
                          if group_of[t] != group_of[t1]), 0)
             matches.append((t1, ru_pool.pop(pick)))
 
-        # knockout rounds: Elo win probability on neutral ground.
-        # R32 winners (16) -> then survivors of each round are the QF
-        # field (8), SF field (4), finalists (2), champion (1).
-        alive = []
-        for t1, t2 in matches:
-            p = elo_win_prob(ratings[t1] - ratings[t2])
-            alive.append(t1 if rng.random() < p else t2)
+        alive = [advance(t1, t2, rng) for t1, t2 in matches]
         for stage in ["qf", "sf", "final", "title"]:
-            nxt = []
-            for i in range(0, len(alive), 2):
-                p = elo_win_prob(ratings[alive[i]] - ratings[alive[i + 1]])
-                nxt.append(alive[i] if rng.random() < p else alive[i + 1])
-            alive = nxt
+            alive = [advance(alive[i], alive[i + 1], rng)
+                     for i in range(0, len(alive), 2)]
             for t in alive:
                 tally[t][stage] += 1
 
@@ -443,17 +454,20 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
 def forecast() -> dict:
     run = _run()
     sim = _simulate(run)
-    a, b = run["goal_params"]
+    off, dfn, NEUTRAL, gauge = run["off"], run["dfn"], run["NEUTRAL"], run["gauge"]
     group_of = {t: g for g, members in sim["groups"].items() for t in members}
     through = datetime.strptime(run["data_through"], "%Y-%m-%d").strftime("%b %-d, %Y")
 
     standings = []
     for team, group in group_of.items():
         odds = sim["odds"][team]
+        o, d = off[team] - gauge, dfn[team] - gauge
         standings.append({
             "abbr": FIFA_CODES.get(team, team[:3].upper()),
             "name": team,
-            "rating": round(run["ratings"][team], 1),
+            "spi": round(_spi(o, d, NEUTRAL), 1),
+            "attack": round(math.exp(NEUTRAL + o), 2),
+            "defense": round(math.exp(NEUTRAL - d), 2),
             "group": f"Group {group}",
             "history": run["history"].get(team, []),
             "r32_prob": odds["r32"],
@@ -467,9 +481,11 @@ def forecast() -> dict:
     for m in run["fixtures"]:
         if (m["home"], m["away"]) in played_keys or len(upcoming) >= 9:
             continue
-        bonus = 0.0 if m["neutral"] else HOME_ADVANTAGE
-        ph, pd, pa = outcome_probs(
-            (run["ratings"][m["home"]] + bonus) - run["ratings"][m["away"]], a, b)
+        bh = NEUTRAL if m["neutral"] else run["HOME"]
+        ba = NEUTRAL if m["neutral"] else run["AWAY"]
+        lam_h = math.exp(bh + off[m["home"]] - dfn[m["away"]])
+        lam_a = math.exp(ba + off[m["away"]] - dfn[m["home"]])
+        ph, pd, pa = outcome_probs(lam_h, lam_a)
         upcoming.append({
             "date": m["date"],
             "group": f"Group {group_of[m['home']]}",
@@ -486,20 +502,26 @@ def forecast() -> dict:
         "season": "Canada/Mexico/USA 2026",
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "data_through": through,
-        "description": f"Elo ratings for every national team from {run['n_played']:,} "
-                       f"internationals since 1872, with advancement and title odds from "
-                       f"{N_SIMULATIONS:,} simulations of the real 48-team bracket. "
-                       f"Updated as the tournament is played.",
-        "methodology": "Ratings follow World Football Elo conventions: K scaled by match "
-                       "importance (World Cup 60, qualifiers and continental finals 40-50, "
-                       "friendlies 20), a goal-difference multiplier, and 100 points of "
-                       "home advantage at non-neutral venues. Win/draw/loss probabilities "
-                       "and simulated scorelines come from a Poisson goal model fitted to "
-                       "the rating gap on all internationals since 1990. The simulation "
-                       "plays the remaining real fixtures, ranks groups on points and goal "
-                       "difference, advances the twelve winners, twelve runners-up and "
-                       "eight best thirds, and uses the official bracket structure with "
-                       "third-place slots randomized within FIFA's allocation rules. Data: "
+        "description": f"Soccer Power Index ratings for every national team from "
+                       f"{run['n_played']:,} internationals since 1872, with advancement "
+                       f"and title odds from {N_SIMULATIONS:,} simulations of the real "
+                       f"48-team bracket. Updated as the tournament is played.",
+        "methodology": "Soccer Power Index gives each team an offensive rating (goals it "
+                       "would score against an average team on a neutral field) and a "
+                       "defensive rating (goals it would concede), fit from goals scored "
+                       "and conceded across every international, with the update weighted "
+                       "by match importance (World Cup highest, friendlies lowest). The "
+                       "SPI shown (0-100) is the share of points a team would take against "
+                       "an average team in this World Cup field, and the offensive and "
+                       "defensive numbers are goals scored and conceded against that same "
+                       "reference. Win/draw/loss probabilities and simulated scorelines "
+                       "come from a Poisson model on those ratings plus home advantage. "
+                       "The simulation plays the remaining real fixtures, ranks groups on "
+                       "points and goal difference, advances the twelve winners, twelve "
+                       "runners-up and eight best thirds, and uses the official bracket "
+                       "with third-place slots randomized within FIFA's allocation rules. "
+                       "Unlike FiveThirtyEight's SPI we omit the roster/club-form blend, "
+                       "which needs club data that isn't openly available. Data: "
                        "martj42/international_results (CC0), updated daily.",
         "standings": standings,
         "upcoming": upcoming,

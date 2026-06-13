@@ -246,6 +246,11 @@ def odds_table(rows: list[dict], columns: list[dict], title: str, note: str = ""
                 hide = " hide-sm" if c.get("hide_sm") else ""
                 cells.append(f'<td class="num{hide}">'
                              f'{round(v) if v is not None else "—"}</td>')
+            elif c["kind"] == "dec":
+                hide = " hide-sm" if c.get("hide_sm") else ""
+                cells.append(f'<td class="num{hide}">'
+                             f'{v:.1f}</td>' if v is not None else
+                             f'<td class="num{hide}">—</td>')
             else:
                 hide = " hide-sm" if c.get("hide_sm") else ""
                 cells.append(f'<td class="num{hide}">{escape(str(v or "—"))}</td>')

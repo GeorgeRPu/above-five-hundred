@@ -4,10 +4,10 @@ pagetitle: "2026 World Cup Forecast | Above .500"
 
 ```{python}
 #| output: asis
-from above500 import wc_elo, render
+from above500 import wc_spi, render
 from html import escape
 
-f = wc_elo.forecast()
+f = wc_spi.forecast()
 
 print(f'<span class="kicker">{escape(f["league"])}</span>')
 print(f'<h1 class="headline">{escape(f["name"])}</h1>')
@@ -19,7 +19,9 @@ print(render.byline(f))
 #| output: asis
 columns = [
     {"key": "name", "label": "Team", "kind": "team"},
-    {"key": "rating", "label": "Elo", "kind": "num"},
+    {"key": "spi", "label": "SPI", "kind": "num"},
+    {"key": "attack", "label": "Off", "kind": "dec", "hide_sm": True},
+    {"key": "defense", "label": "Def", "kind": "dec", "hide_sm": True},
     {"key": "group", "label": "Group", "kind": "text"},
     {"key": "history", "label": "Trend", "kind": "spark", "hide_sm": True},
     {"key": "r32_prob", "label": "Make round of 32", "kind": "prob"},
