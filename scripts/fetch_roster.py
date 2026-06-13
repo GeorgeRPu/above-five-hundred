@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""Fetch 2026 World Cup squads from API-Football and write a roster snapshot.
+"""Fetch national-team roster strength from API-Football (free tier).
 
-Produces above500/data/roster_ratings.json: one roster-strength score per
-nation, built from each squad's players' best season match ratings, with a
-peak-age weighting. Run by .github/workflows/refresh-roster.yml (weekly /
-on demand); the committed snapshot is read offline at render time, so the
-free tier's 100-requests/day limit only matters for this occasional pull.
+API-Football's free plan only covers seasons 2022-2024, so we use the
+2024 season: for each of the 48 nations we read its 2024 player pool and
+take each player's best season match rating (club form where the API
+returns it), peak-age weighted. 2024 club form already reflects the
+current picture far better than older datasets, and squads are ~80%
+stable into 2026.
 
-Requires:
-  * APIFOOTBALL_KEY in the environment (free key from dashboard.api-football.com)
-  * network egress to v3.football.api-sports.io
+Writes above500/data/roster_ratings.json. The free tier allows only 100
+requests/day, so the fetch is INCREMENTAL and idempotent: national-team
+ids and completed nations are cached in the snapshot, each run fills as
+many remaining nations as the budget allows and commits progress, and a
+later run continues. Run by .github/workflows/refresh-roster.yml weekly
+or on demand; trigger it a couple of times to fully populate.
 
-Usage:
-    APIFOOTBALL_KEY=... python3 scripts/fetch_roster.py
+Requires APIFOOTBALL_KEY and egress to v3.football.api-sports.io.
 """
 
 from __future__ import annotations
@@ -31,133 +34,160 @@ from above500.wc_spi import FIFA_CODES  # the 48 nations, in our naming  # noqa:
 
 OUT = Path(__file__).resolve().parent.parent / "above500" / "data" / "roster_ratings.json"
 BASE = "https://v3.football.api-sports.io"
-WC_LEAGUE = 1          # API-Football league id for the FIFA World Cup
-WC_SEASON = 2026
-CLUB_SEASON = 2025     # season whose club ratings describe current form
-TOP_N = 16             # squad players that define roster strength
-REQUEST_PAUSE = 7.0    # seconds; free tier allows 10 requests/minute
+SEASON = 2024            # freshest season in the free plan's coverage
+SEED_LEAGUE, SEED_SEASON = 1, 2022   # World Cup 2022: cheap source of nation ids
+TOP_N = 16               # squad players that define roster strength
+MAX_REQUESTS = 90        # leave headroom under the 100/day free limit
+REQUEST_PAUSE = 7.0      # seconds; free tier allows 10 requests/minute
 
-# API-Football uses its own country names; map the ones that differ from ours.
+# API-Football country names that differ from ours.
 NAME_FIXUPS = {
     "Korea Republic": "South Korea", "USA": "United States",
-    "Czechia": "Czech Republic", "Cote d'Ivoire": "Ivory Coast",
-    "Côte d'Ivoire": "Ivory Coast", "IR Iran": "Iran", "Iran ": "Iran",
-    "Türkiye": "Turkey", "Saudi-Arabia": "Saudi Arabia",
-    "DR Congo": "DR Congo", "Congo DR": "DR Congo",
-    "Cape Verde Islands": "Cape Verde", "Cabo Verde": "Cape Verde",
-    "Curacao": "Curaçao", "Bosnia": "Bosnia and Herzegovina",
-    "Bosnia and Herzegovina": "Bosnia and Herzegovina",
+    "Czechia": "Czech Republic", "Czech-Republic": "Czech Republic",
+    "Cote d'Ivoire": "Ivory Coast", "Côte d'Ivoire": "Ivory Coast",
+    "IR Iran": "Iran", "Türkiye": "Turkey", "Saudi-Arabia": "Saudi Arabia",
+    "Congo DR": "DR Congo", "Cape Verde Islands": "Cape Verde",
+    "Cabo Verde": "Cape Verde", "Curacao": "Curaçao",
 }
+# Search queries for nations whose name needs a hint (>=3 chars, fuzzy).
+SEARCH_QUERY = {
+    "South Korea": "Korea Republic", "United States": "USA",
+    "DR Congo": "Congo", "Ivory Coast": "Ivory Coast", "Iran": "Iran",
+    "Curaçao": "Curacao", "Czech Republic": "Czechia",
+}
+
+_requests = 0
 
 
 def _api(path: str, **params) -> dict:
+    global _requests
+    _requests += 1
     url = f"{BASE}/{path}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"x-apisports-key": API_KEY})
     with urllib.request.urlopen(req, timeout=60) as resp:
         data = json.loads(resp.read())
-    errors = data.get("errors")
-    if errors:
-        print(f"  API errors for {path}({params}): {errors}")
+    if data.get("errors"):
+        print(f"  API errors for {path}({params}): {data['errors']}")
+    time.sleep(REQUEST_PAUSE)
     return data
 
 
+def _budget_left() -> bool:
+    return _requests < MAX_REQUESTS
+
+
 def _age_weight(age: int | None) -> float:
-    """Peak around 24-29; discount the young/raw and the ageing."""
     if not age:
         return 0.9
     if age <= 21:
-        return 0.85 + 0.03 * (age - 18)      # 0.85 .. 0.94
+        return 0.85 + 0.03 * (age - 18)
     if age <= 29:
         return 1.0
-    return max(0.5, 1.0 - 0.06 * (age - 29))  # decline past 29
+    return max(0.5, 1.0 - 0.06 * (age - 29))
 
 
-def _player_rating(stats: list) -> tuple[float | None, str | None, int | None]:
-    """Best season match rating across a player's competitions, with club."""
-    best, club, apps = None, None, 0
+def _player_rating(stats: list) -> float | None:
+    """Best season match rating across a player's competitions."""
+    best = None
     for s in stats or []:
         games = s.get("games") or {}
-        rating = games.get("rating")
-        played = games.get("appearences") or 0
-        if rating is None or played < 3:
+        if (games.get("appearences") or 0) < 3 or games.get("rating") is None:
             continue
         try:
-            r = float(rating)
+            r = float(games["rating"])
         except (TypeError, ValueError):
             continue
-        if best is None or r > best:
-            best, club, apps = r, (s.get("team") or {}).get("name"), played
-    return best, club, apps
+        best = r if best is None else max(best, r)
+    return best
 
 
-def fetch_team_ids() -> dict[str, int]:
-    """Our-name -> API-Football team id, for the 48 qualified nations."""
-    ids: dict[str, int] = {}
-    data = _api("teams", league=WC_LEAGUE, season=WC_SEASON)
+def seed_team_ids(ids: dict) -> None:
+    """Seed nation ids cheaply from the World Cup 2022 team list."""
+    data = _api("teams", league=SEED_LEAGUE, season=SEED_SEASON)
     for item in data.get("response", []):
         team = item.get("team") or {}
         name = NAME_FIXUPS.get(team.get("name"), team.get("name"))
-        if name in FIFA_CODES:
+        if name in FIFA_CODES and name not in ids:
             ids[name] = team["id"]
-    return ids
+
+
+def search_team_id(name: str) -> int | None:
+    """Find a nation's team id via team search (national teams only)."""
+    data = _api("teams", search=SEARCH_QUERY.get(name, name))
+    for item in data.get("response", []):
+        team = item.get("team") or {}
+        if team.get("national"):
+            return team["id"]
+    return None
 
 
 def fetch_roster(team_id: int) -> dict:
-    """Roster strength for one nation from its players' club-season ratings."""
     ratings, page, pages = [], 1, 1
-    while page <= pages:
-        data = _api("players", team=team_id, season=CLUB_SEASON, page=page)
+    while page <= pages and _budget_left():
+        data = _api("players", team=team_id, season=SEASON, page=page)
         pages = (data.get("paging") or {}).get("total", 1)
         for item in data.get("response", []):
-            player = item.get("player") or {}
-            rating, club, _ = _player_rating(item.get("statistics"))
-            if rating is not None:
-                ratings.append((rating * _age_weight(player.get("age")), club))
+            r = _player_rating(item.get("statistics"))
+            if r is not None:
+                ratings.append(r * _age_weight((item.get("player") or {}).get("age")))
         page += 1
-        time.sleep(REQUEST_PAUSE)
     if not ratings:
         return {"rating": None, "n_players": 0}
-    ratings.sort(key=lambda x: x[0], reverse=True)
+    ratings.sort(reverse=True)
     top = ratings[:TOP_N]
-    return {
-        "rating": round(sum(r for r, _ in top) / len(top), 4),
-        "n_players": len(top),
-    }
+    return {"rating": round(sum(top) / len(top), 4), "n_players": len(top)}
+
+
+def load_snapshot() -> dict:
+    try:
+        return json.loads(OUT.read_text())
+    except Exception:
+        return {}
+
+
+def save_snapshot(snap: dict) -> None:
+    snap["source"] = "API-Football"
+    snap["club_season"] = SEASON
+    snap["updated"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(json.dumps(snap, indent=2) + "\n")
 
 
 def main() -> None:
-    # Diagnostics: confirm the key works and the World Cup is in this plan's coverage.
-    status = _api("status").get("response", {})
-    sub = (status or {}).get("subscription", {})
-    reqs = (status or {}).get("requests", {})
-    print(f"account: plan={sub.get('plan')} active={sub.get('active')} "
-          f"requests={reqs.get('current')}/{reqs.get('limit_day')}/day")
-    wc = _api("leagues", id=WC_LEAGUE, season=WC_SEASON).get("response", [])
-    print(f"World Cup league lookup (id={WC_LEAGUE}, season={WC_SEASON}): "
-          f"{len(wc)} result(s)" + (f" -> {wc[0]['league']['name']}" if wc else " (not in plan?)"))
+    status = _api("status").get("response", {}) or {}
+    print(f"account: plan={status.get('subscription', {}).get('plan')} "
+          f"requests today={status.get('requests', {}).get('current')}/"
+          f"{status.get('requests', {}).get('limit_day')}")
 
-    ids = fetch_team_ids()
-    print(f"matched {len(ids)}/48 nations")
-    if not ids:
-        sys.exit("No teams returned — see API errors / coverage above; not writing snapshot.")
-    missing = sorted(set(FIFA_CODES) - set(ids))
-    if missing:
-        print("UNMATCHED (add to NAME_FIXUPS):", missing)
+    snap = load_snapshot()
+    ids = snap.setdefault("team_ids", {})
+    teams = snap.setdefault("teams", {})
 
-    teams = {}
-    for name, tid in sorted(ids.items()):
-        teams[name] = fetch_roster(tid)
+    # Discover any missing nation ids (cheap seed first, then search).
+    if len(ids) < len(FIFA_CODES) and _budget_left():
+        seed_team_ids(ids)
+    for name in FIFA_CODES:
+        if name not in ids and _budget_left():
+            tid = search_team_id(name)
+            if tid:
+                ids[name] = tid
+    save_snapshot(snap)
+    print(f"ids: {len(ids)}/48  (unmapped: {sorted(set(FIFA_CODES) - set(ids))})")
+
+    # Fill rosters for nations not done yet, until the budget runs out.
+    todo = [n for n in FIFA_CODES if n in ids and n not in teams]
+    for name in todo:
+        if not _budget_left():
+            break
+        teams[name] = fetch_roster(ids[name])
+        save_snapshot(snap)  # persist after each nation so progress survives
         print(f"  {name:24s} rating={teams[name]['rating']} n={teams[name]['n_players']}")
-        time.sleep(REQUEST_PAUSE)
 
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps({
-        "source": "API-Football",
-        "club_season": CLUB_SEASON,
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "teams": teams,
-    }, indent=2) + "\n")
-    print(f"Wrote {OUT}")
+    done = sum(1 for v in teams.values() if v.get("rating") is not None)
+    print(f"done {done}/48 nations | requests used ~{_requests} | "
+          f"{'COMPLETE' if done >= len(FIFA_CODES) else 'run again to continue'}")
+    if done == 0:
+        sys.exit("No rosters fetched — see errors above.")
 
 
 if __name__ == "__main__":
