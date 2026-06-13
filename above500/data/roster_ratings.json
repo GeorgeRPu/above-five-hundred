@@ -1,6 +1,152 @@
 {
   "source": "API-Football",
-  "club_season": 2025,
-  "updated": "2026-06-13T08:14:11Z",
-  "teams": {}
+  "club_season": 2024,
+  "updated": "2026-06-13T08:35:50Z",
+  "teams": {
+    "Mexico": {
+      "rating": 6.6989,
+      "n_players": 9
+    },
+    "Czech Republic": {
+      "rating": 7.2403,
+      "n_players": 16
+    },
+    "South Korea": {
+      "rating": null,
+      "n_players": 0
+    },
+    "South Africa": {
+      "rating": null,
+      "n_players": 0
+    },
+    "Canada": {
+      "rating": 7.0396,
+      "n_players": 16
+    },
+    "Switzerland": {
+      "rating": 7.0301,
+      "n_players": 16
+    },
+    "Qatar": {
+      "rating": null,
+      "n_players": 0
+    },
+    "Brazil": {
+      "rating": 6.9826,
+      "n_players": 16
+    },
+    "Scotland": {
+      "rating": 7.0994,
+      "n_players": 16
+    },
+    "Morocco": {
+      "rating": 7.0432,
+      "n_players": 6
+    },
+    "Haiti": {
+      "rating": 7.1246,
+      "n_players": 16
+    },
+    "United States": {
+      "rating": 6.8949,
+      "n_players": 13
+    },
+    "Turkey": {
+      "rating": 7.0734,
+      "n_players": 16
+    },
+    "Paraguay": {
+      "rating": 6.1676,
+      "n_players": 14
+    },
+    "Australia": {
+      "rating": null,
+      "n_players": 0
+    },
+    "Germany": {
+      "rating": 7.3787,
+      "n_players": 16
+    },
+    "Ivory Coast": {
+      "rating": null,
+      "n_players": 0
+    },
+    "Ecuador": {
+      "rating": 6.4562,
+      "n_players": 16
+    },
+    "Cura\u00e7ao": {
+      "rating": 6.5879,
+      "n_players": 16
+    },
+    "Netherlands": {
+      "rating": 7.4043,
+      "n_players": 16
+    },
+    "Sweden": {
+      "rating": 7.4279,
+      "n_players": 16
+    },
+    "Japan": {
+      "rating": null,
+      "n_players": 0
+    },
+    "Tunisia": {
+      "rating": 6.665,
+      "n_players": 8
+    },
+    "Belgium": {
+      "rating": 6.7293,
+      "n_players": 12
+    }
+  },
+  "team_ids": {
+    "Belgium": 1,
+    "France": 2,
+    "Croatia": 3,
+    "Brazil": 6,
+    "Uruguay": 7,
+    "Spain": 9,
+    "England": 10,
+    "Japan": 12,
+    "Senegal": 13,
+    "Switzerland": 15,
+    "Mexico": 16,
+    "South Korea": 17,
+    "Australia": 20,
+    "Iran": 22,
+    "Saudi Arabia": 23,
+    "Germany": 25,
+    "Argentina": 26,
+    "Portugal": 27,
+    "Tunisia": 28,
+    "Morocco": 31,
+    "Netherlands": 1118,
+    "Ghana": 1504,
+    "Qatar": 1569,
+    "Ecuador": 2382,
+    "United States": 2384,
+    "Canada": 5529,
+    "Czech Republic": 770,
+    "South Africa": 1531,
+    "Scotland": 1108,
+    "Haiti": 2386,
+    "Turkey": 777,
+    "Paraguay": 2380,
+    "Ivory Coast": 1501,
+    "Cura\u00e7ao": 5530,
+    "Sweden": 5,
+    "Egypt": 32,
+    "New Zealand": 1716,
+    "Cape Verde": 1533,
+    "Iraq": 1567,
+    "Norway": 1090,
+    "Austria": 775,
+    "Algeria": 1532,
+    "Jordan": 1548,
+    "Uzbekistan": 1568,
+    "DR Congo": 1508,
+    "Colombia": 8,
+    "Panama": 11
+  }
 }
