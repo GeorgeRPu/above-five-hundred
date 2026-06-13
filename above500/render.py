@@ -379,6 +379,94 @@ def decades_table(backtest: dict) -> str:
     )
 
 
+def _corr_cell(c) -> str:
+    return f'<td class="num">{c:.3f}</td>' if c is not None else '<td class="num">—</td>'
+
+
+def regression_backtest_table(backtest: dict) -> str:
+    """Projection accuracy: ours vs. carry-forward baselines on the same seasons."""
+    rows = []
+    for i, m in enumerate(backtest["models"]):
+        name = escape(m["model"])
+        if i == 0:
+            name = f"<strong>{name}</strong>"
+        rows.append(
+            "<tr>"
+            f'<td class="l">{name}</td>'
+            f'<td class="num">{m["n"]:,}</td>'
+            f'<td class="num">{m["mae"]:.3f}</td>'
+            f'<td class="num">{m["rmse"]:.3f}</td>'
+            f'{_corr_cell(m["corr"])}'
+            "</tr>"
+        )
+    return (
+        section_head(f"Backtest since {backtest['since']}",
+                     f"{backtest['n']:,} player-seasons, out-of-sample")
+        + '<table class="fte"><thead><tr>'
+        + '<th class="l">Projection</th><th>Seasons</th><th>MAE</th>'
+        + '<th>RMSE</th><th>Correlation</th>'
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
+        + '<p class="table-note">Each projection is scored against the player\'s actual '
+        + "next-season RAPTOR. Mean absolute error and RMSE measure how far off the "
+        + "forecasts are (lower is better); correlation rewards ranking players correctly "
+        + "(higher is better). The baselines simply carry a player's prior-season rating "
+        + "forward.</p>"
+    )
+
+
+def projection_tiers_table(backtest: dict) -> str:
+    """Projected vs. actual RAPTOR by tier — a calibration analogue."""
+    rows = []
+    for t in backtest["tiers"]:
+        gap = t["actual"] - t["predicted"]
+        rows.append(
+            "<tr>"
+            f'<td class="l">{escape(t["tier"])}</td>'
+            f'<td class="num">{t["n"]:,}</td>'
+            f'<td class="num">{t["predicted"]:+.2f}</td>'
+            f'<td class="num">{t["actual"]:+.2f}</td>'
+            f'<td class="num">{gap:+.2f}</td>'
+            "</tr>"
+        )
+    return (
+        section_head("Calibration", "Projection vs. reality")
+        + '<table class="fte"><thead><tr>'
+        + '<th class="l">Projected tier</th><th>Seasons</th>'
+        + '<th>Avg. projection</th><th>Actual RAPTOR</th><th>Gap</th>'
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
+        + '<p class="table-note">A well-calibrated projection lands near the truth in '
+        + "each tier: the players it pegs as stars should average star production, and "
+        + "those it writes off should average replacement level.</p>"
+    )
+
+
+def regression_eras_table(backtest: dict) -> str:
+    if not backtest.get("eras"):
+        return ""
+    rows = []
+    for e in backtest["eras"]:
+        rows.append(
+            "<tr>"
+            f'<td class="l">{escape(e["decade"])}</td>'
+            f'<td class="num">{e["n"]:,}</td>'
+            f'<td class="num">{e["mae"]:.3f}</td>'
+            f'{_corr_cell(e["corr"])}'
+            "</tr>"
+        )
+    return (
+        section_head("Era by era", "Projectability over time")
+        + '<table class="fte"><thead><tr>'
+        + '<th class="l">Decade</th><th>Seasons</th><th>MAE</th><th>Correlation</th>'
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
+    )
+
+
 def methodology_box(forecast: dict) -> str:
     text = forecast.get("methodology")
     if not text:

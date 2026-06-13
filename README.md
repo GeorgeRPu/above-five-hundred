@@ -119,6 +119,37 @@ fetches any games newer than the archive from Paine's repo (falling
 back to the archive if offline), so the nightly build keeps ratings as
 current as the upstream data allows.
 
+### NBA RAPTOR Player Ratings (`above500/nba_raptor.py`)
+
+FiveThirtyEight's RAPTOR was their NBA *player*-value model: a plus-minus
+rating in points per 100 possessions a player adds above league average
+(split into offense and defense) rolled up into wins above replacement
+(WAR). 538 published RAPTOR for all 19,159 player-seasons from 1976-77
+through 2021-22 and retired it in 2023; that full run is committed at
+`above500/data/nba_raptor.csv.gz`.
+
+The descriptive ratings shown in the leaderboard are 538's own. The model
+this module **adds** is a next-season projection: a player's coming-season
+RAPTOR is forecast from a recency- and possession-weighted blend of their
+recent seasons, regressed toward replacement level by a shrinkage that eases
+as the sample grows (a Marcel/CARMELO-style recipe). Its two free parameters
+(reversion strength and replacement level) plus the recency decay are fit on
+target seasons through 2009 and then evaluated, untouched, on 2010 onward.
+Every projection uses only seasons played before the one it forecasts.
+
+Walk-forward over **4,112 out-of-sample player-seasons since 2010** the
+projection lands a mean absolute error of **1.65** RAPTOR points (0.673
+correlation with actual), versus 2.02 for carrying 538's predictive PREDATOR
+rating forward, 2.02 for prior-season RAPTOR, and 2.40 for a flat
+replacement-level guess — i.e. the blend beats every carry-forward baseline,
+including 538's own forward-looking rating.
+
+**Data**: [FiveThirtyEight's nba-raptor dataset](https://github.com/fivethirtyeight/data/tree/master/nba-raptor)
+(CC BY 4.0), trimmed to the ten columns the model needs by
+`scripts/prepare_raptor_data.py`. RAPTOR is a retired model with no live
+feed, so the archive is the complete 1976-77 to 2021-22 record; the nightly
+build re-runs the projection and backtest from it.
+
 ### 2026 World Cup Forecast (`above500/wc_spi.py`)
 
 A Soccer Power Index (SPI) model in the style of FiveThirtyEight: every
@@ -169,9 +200,11 @@ index.qmd                home: model index
 about.qmd                methodology
 forecasts/                one page per model
   nba-elo.qmd
+  nba-raptor.qmd
   world-cup-2026.qmd
 above500/                Python package: models + HTML renderers
   nba_elo.py             NBA Elo ratings + 1955+ backtest
+  nba_raptor.py          NBA RAPTOR ratings + next-season projection
   wc_spi.py              international football SPI + World Cup sim
   render.py              payload -> HTML (tables, matchups, sparklines)
   data/                  committed data archives (CC BY 4.0 / CC0)

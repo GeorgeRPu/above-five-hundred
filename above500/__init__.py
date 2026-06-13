@@ -26,4 +26,14 @@ MODELS = [
         "color": "#fc4f30",
         "href": "forecasts/nba-elo.qmd",
     },
+    {
+        "slug": "nba-raptor",
+        "module": "nba_raptor",
+        "name": "NBA RAPTOR Player Ratings",
+        "league": "NBA",
+        "description": "FiveThirtyEight's RAPTOR plus-minus and WAR for every player "
+                       "since 1977, with a backtested next-season projection.",
+        "color": "#30a2da",
+        "href": "forecasts/nba-raptor.qmd",
+    },
 ]
