@@ -1,0 +1,19 @@
+[project]
+name = "above500"
+version = "0.1.0"
+description = "FiveThirtyEight-style sports models, rendered with Quarto"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel>=6.29",
+    "nbclient>=0.10",
+    "nbformat>=5.10",
+    "jupyter-core>=5.7",
+    "pyyaml>=6.0",
+]
+
+[tool.uv]
+# The models are pure-stdlib; `above500` is imported from the repo root at
+# render time rather than installed, so uv only needs to manage the
+# environment, not build this project as a package.
+package = false

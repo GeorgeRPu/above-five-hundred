@@ -22,12 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          enable-cache: true
 
       - name: Rebuild roster snapshot
-        run: python3 scripts/fetch_roster.py
+        run: uv run python scripts/fetch_roster.py
 
       - name: Commit if changed
         run: |

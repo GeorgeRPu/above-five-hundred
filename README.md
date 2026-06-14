@@ -23,12 +23,12 @@ forecasts refresh automatically — push model code, not JSON.
 ## Quick start
 
 ```bash
+# uv: https://docs.astral.sh/uv/getting-started/installation/
 # Quarto CLI: https://quarto.org/docs/get-started/
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync               # create .venv from pyproject.toml / uv.lock
 
-quarto preview        # live-reloading local preview
-quarto render         # full build into _site/
+uv run quarto preview # live-reloading local preview
+uv run quarto render  # full build into _site/
 ```
 
 To publish, enable GitHub Pages for this repository (Settings → Pages →
