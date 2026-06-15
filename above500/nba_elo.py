@@ -445,7 +445,8 @@ def forecast() -> dict:
     def team_blob(side: dict) -> dict:
         abbr, color = TEAM_META.get(side["name"], (None, None))
         if abbr:
-            side.update(abbr=abbr, color=color)
+            side.update(abbr=abbr, color=color,
+                        logo=f"/assets/logos/nba/{abbr.lower()}.png")
         return side
 
     standings = []
@@ -458,6 +459,7 @@ def forecast() -> dict:
             "abbr": abbr,
             "name": team,
             "color": color,
+            "logo": f"/assets/logos/nba/{abbr.lower()}.png",
             "rating": round(run["ratings"][team], 1),
             "rating_change_7d": round(history[-1] - history[0], 1),
             "record": f"{w}-{l}",

@@ -2,6 +2,8 @@ project:
   type: website
   output-dir: _site
   execute-dir: project
+  resources:
+    - assets/logos/**
 
 website:
   title: "Above .500"

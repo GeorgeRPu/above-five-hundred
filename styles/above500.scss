@@ -304,6 +304,22 @@ table.fte {
   text-align: left;
 }
 
+.team-logo {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.team-flag {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-right: 4px;
+  border: 1px solid #ddd;
+}
+
 .team-sym {
   flex: none;
   width: 28px;

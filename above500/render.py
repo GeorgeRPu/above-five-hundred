@@ -70,10 +70,15 @@ def team_cell(team: dict, sub: str | None = None) -> str:
     abbr = team.get("abbr") or (team.get("name", "?")[:3].upper())
     color = team.get("color") or accent_for(abbr)
     name = escape(team.get("name") or abbr)
+    logo = team.get("logo")
     sub_html = f' <span class="team-sub">{escape(str(sub))}</span>' if sub else ""
+    if logo:
+        marker = f'<img class="team-logo" src="{escape(logo)}" alt="{escape(abbr)}">'
+    else:
+        marker = f'<span class="team-sym" style="color:{color}">{escape(abbr)}</span>'
     return (
         f'<div class="team-cell">'
-        f'<span class="team-sym" style="color:{color}">{escape(abbr)}</span>'
+        f'{marker}'
         f'<span><span class="team-name">{name}</span>{sub_html}</span>'
         f"</div>"
     )
@@ -266,19 +271,27 @@ def odds_table(rows: list[dict], columns: list[dict], title: str, note: str = ""
     )
 
 
+def _flag_img(src: str | None, abbr: str) -> str:
+    if src:
+        return f'<img class="team-flag" src="{escape(src)}" alt="{escape(abbr)}">'
+    return ""
+
+
 def fixtures_table(fixtures: list[dict], title: str, note: str = "") -> str:
     """Upcoming matches with win/draw/win probabilities."""
     if not fixtures:
         return ""
     body = []
     for m in fixtures:
+        h_flag = _flag_img(m.get("home_logo"), m.get("home_abbr", ""))
+        a_flag = _flag_img(m.get("away_logo"), m.get("away_abbr", ""))
         body.append(
             "<tr>"
             f'<td class="l num">{escape(fmt_date(m["date"]))}</td>'
             f'<td class="num hide-sm">{escape(m.get("group", ""))}</td>'
-            f'<td class="l"><span class="team-name">{escape(m["home"])}</span>'
+            f'<td class="l">{h_flag}<span class="team-name">{escape(m["home"])}</span>'
             f' <span class="team-sub">v</span> '
-            f'<span class="team-name">{escape(m["away"])}</span></td>'
+            f'{a_flag}<span class="team-name">{escape(m["away"])}</span></td>'
             f'{_prob_td(m["p_home"])}'
             f'{_prob_td(m["p_draw"])}'
             f'{_prob_td(m["p_away"])}'

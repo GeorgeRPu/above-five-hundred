@@ -79,6 +79,23 @@ FIFA_CODES = {
     "Ghana": "GHA", "Croatia": "CRO", "Panama": "PAN",
 }
 
+FLAG_ISO2 = {
+    "Algeria": "dz", "Argentina": "ar", "Australia": "au", "Austria": "at",
+    "Belgium": "be", "Bosnia and Herzegovina": "ba", "Brazil": "br",
+    "Canada": "ca", "Cape Verde": "cv", "Colombia": "co", "Croatia": "hr",
+    "Curaçao": "cw", "Czech Republic": "cz", "DR Congo": "cd",
+    "Ecuador": "ec", "Egypt": "eg", "England": "gb-eng", "France": "fr",
+    "Germany": "de", "Ghana": "gh", "Haiti": "ht", "Iran": "ir",
+    "Iraq": "iq", "Ivory Coast": "ci", "Japan": "jp", "Jordan": "jo",
+    "Mexico": "mx", "Morocco": "ma", "Netherlands": "nl",
+    "New Zealand": "nz", "Norway": "no", "Panama": "pa", "Paraguay": "py",
+    "Portugal": "pt", "Qatar": "qa", "Saudi Arabia": "sa",
+    "Scotland": "gb-sct", "Senegal": "sn", "South Africa": "za",
+    "South Korea": "kr", "Spain": "es", "Sweden": "se",
+    "Switzerland": "ch", "Tunisia": "tn", "Turkey": "tr",
+    "United States": "us", "Uruguay": "uy", "Uzbekistan": "uz",
+}
+
 MAJOR_FINALS = ("uefa euro", "copa américa", "african cup of nations",
                 "afc asian cup", "concacaf championship", "gold cup")
 
@@ -466,6 +483,10 @@ def forecast() -> dict:
     group_of = {t: g for g, members in sim["groups"].items() for t in members}
     through = datetime.strptime(run["data_through"], "%Y-%m-%d").strftime("%b %-d, %Y")
 
+    def _flag(name):
+        iso2 = FLAG_ISO2.get(name)
+        return f"/assets/logos/flags/{iso2}.svg" if iso2 else None
+
     standings = []
     for team, group in group_of.items():
         odds = sim["odds"][team]
@@ -473,6 +494,7 @@ def forecast() -> dict:
         standings.append({
             "abbr": FIFA_CODES.get(team, team[:3].upper()),
             "name": team,
+            "logo": _flag(team),
             "spi": round(_spi(o, d, NEUTRAL), 1),
             "attack": round(math.exp(NEUTRAL + o), 2),
             "defense": round(math.exp(NEUTRAL - d), 2),
@@ -500,6 +522,8 @@ def forecast() -> dict:
             "home": m["home"], "away": m["away"],
             "home_abbr": FIFA_CODES.get(m["home"], m["home"][:3].upper()),
             "away_abbr": FIFA_CODES.get(m["away"], m["away"][:3].upper()),
+            "home_logo": _flag(m["home"]),
+            "away_logo": _flag(m["away"]),
             "p_home": ph, "p_draw": pd, "p_away": pa,
         })
 
