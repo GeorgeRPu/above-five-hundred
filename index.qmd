@@ -4,9 +4,9 @@ pagetitle: "Above .500 | Sports forecasts & models"
 
 ```{=html}
 <span class="kicker">Above .500</span>
-<h1 class="headline">Our models</h1>
-<p class="dek">The forecasts, ratings and simulations behind Above .500 —
-every model re-runs when the site is built.</p>
+<h1 class="headline">Upcoming forecasts</h1>
+<p class="dek">Win probabilities for the matches and games coming up next, from
+our models. Every forecast re-runs when the site is built.</p>
 ```
 
 ```{python}
@@ -14,11 +14,14 @@ every model re-runs when the site is built.</p>
 from importlib import import_module
 from above500 import MODELS, render
 
-rows = []
 for m in MODELS:
     f = import_module(f"above500.{m['module']}").forecast()
-    rows.append(render.model_row(m, updated=f["updated"], season=f["season"]))
-
-print(render.section_head("Latest forecasts", "Updated daily"))
-print(f'<div class="model-index">{"".join(rows)}</div>')
+    # match-based models (e.g. World Cup) expose `upcoming` fixtures;
+    # game-based models (e.g. NBA Elo) expose `games` carrying a status.
+    # Each renderer returns "" when there is nothing upcoming, so models
+    # with no scheduled events simply drop out.
+    print(render.fixtures_table(f.get("upcoming", []), m["name"],
+                                "Win/draw/win probabilities"))
+    print(render.games_section(f, "upcoming", m["name"],
+                               "Win probability from our ratings"))
 ```

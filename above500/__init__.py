@@ -5,6 +5,34 @@ standard schema (see README). Quarto pages import the model, run it at
 render time, and emit HTML via `above500.render`.
 """
 
+import os
+from pathlib import Path
+
+
+def _load_dotenv() -> None:
+    """Populate os.environ from a gitignored .env at the repo root.
+
+    Lets local renders pick up API keys (BALLDONTLIE_API_KEY, …) without
+    exporting them each session. Existing variables win, so CI secrets are
+    never overridden. Pure stdlib — no python-dotenv dependency.
+    """
+    env_path = Path(__file__).resolve().parent.parent / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_dotenv()
+
+
 MODELS = [
     {
         "slug": "world-cup-2026",

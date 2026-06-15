@@ -44,7 +44,10 @@ LIVE_CACHE_MAX_AGE = 12 * 3600  # seconds
 BDL_URLS = ("https://api.balldontlie.io/nba/v1/games",
             "https://api.balldontlie.io/v1/games")
 BDL_CACHE = Path(os.environ.get("TMPDIR", "/tmp")) / "above500_bdl_games.json"
+BDL_SCHED_CACHE = Path(os.environ.get("TMPDIR", "/tmp")) / "above500_bdl_schedule.json"
 BDL_MAX_REQUESTS = 60
+SCHEDULE_DAYS = 7       # how far ahead to look for upcoming games
+SCHEDULE_LIMIT = 12     # most upcoming games to forecast on the homepage
 
 INITIAL_RATING = 1300.0
 MEAN_RATING = 1505.0
@@ -183,26 +186,11 @@ def _parse_bdl_games(payloads: list[dict]) -> list[dict]:
     return games
 
 
-def _fetch_bdl_games(after_date: str) -> list[dict]:
-    """Games newer than `after_date` from balldontlie. Empty list on any failure."""
-    api_key = os.environ.get("BALLDONTLIE_API_KEY", "").strip()
-    if not api_key:
-        return []
-
-    if BDL_CACHE.exists() and time.time() - BDL_CACHE.stat().st_mtime < LIVE_CACHE_MAX_AGE:
-        try:
-            cached = json.loads(BDL_CACHE.read_text())
-            return [g for g in cached if g["date"] > after_date]
-        except Exception:
-            pass
-
-    start = (datetime.strptime(after_date, "%Y-%m-%d") + timedelta(days=1)).date()
-    end = datetime.now(timezone.utc).date()
-    payloads, requests_made = [], 0
-
+def _bdl_paginate(start, end, api_key: str) -> list[dict] | None:
+    """Fetch every /games page in [start, end]. None on any failure or page-cap hit."""
     for base_url in BDL_URLS:
-        payloads.clear()
-        cursor = None
+        payloads: list[dict] = []
+        cursor, requests_made = None, 0
         try:
             while requests_made < BDL_MAX_REQUESTS:
                 params = {"start_date": start.isoformat(), "end_date": end.isoformat(),
@@ -226,17 +214,87 @@ def _fetch_bdl_games(after_date: str) -> list[dict]:
                 payloads.append(payload)
                 cursor = (payload.get("meta") or {}).get("next_cursor")
                 if cursor is None:
-                    games = _parse_bdl_games(payloads)
-                    try:
-                        BDL_CACHE.write_text(json.dumps(games))
-                    except Exception:
-                        pass
-                    return games
+                    return payloads
                 time.sleep(0.5)
-            return []  # page cap hit: treat as failure rather than half a season
+            return None  # page cap hit: treat as failure rather than half a season
         except Exception:
             continue  # try the legacy URL
-    return []
+    return None
+
+
+def _fetch_bdl_games(after_date: str) -> list[dict]:
+    """Finished games newer than `after_date` from balldontlie. [] on any failure."""
+    api_key = os.environ.get("BALLDONTLIE_API_KEY", "").strip()
+    if not api_key:
+        return []
+
+    if BDL_CACHE.exists() and time.time() - BDL_CACHE.stat().st_mtime < LIVE_CACHE_MAX_AGE:
+        try:
+            cached = json.loads(BDL_CACHE.read_text())
+            return [g for g in cached if g["date"] > after_date]
+        except Exception:
+            pass
+
+    start = (datetime.strptime(after_date, "%Y-%m-%d") + timedelta(days=1)).date()
+    end = datetime.now(timezone.utc).date()
+    payloads = _bdl_paginate(start, end, api_key)
+    if payloads is None:
+        return []
+    games = _parse_bdl_games(payloads)
+    try:
+        BDL_CACHE.write_text(json.dumps(games))
+    except Exception:
+        pass
+    return games
+
+
+def _parse_bdl_schedule(payloads: list[dict]) -> list[dict]:
+    """Convert balldontlie /games pages to scheduled (not-yet-final) matchups."""
+    games = []
+    for payload in payloads:
+        for g in payload.get("data", []):
+            if g.get("status") == "Final":
+                continue
+            home = BDL_ABBR_TO_FRANCHISE.get(g["home_team"]["abbreviation"])
+            away = BDL_ABBR_TO_FRANCHISE.get(g["visitor_team"]["abbreviation"])
+            if not home or not away:
+                continue
+            games.append({
+                "season": int(g["season"]) + 1,   # bdl 2025 == our 2026 (2025-26)
+                "date": g["date"],
+                "playoffs": bool(g.get("postseason")),
+                "home": home,
+                "away": away,
+                "neutral": g.get("ist_stage") == "Championship",
+            })
+    games.sort(key=lambda g: (g["date"], g["home"]))
+    return games
+
+
+def _fetch_bdl_schedule(days: int = SCHEDULE_DAYS) -> list[dict]:
+    """Upcoming (unplayed) games over the next `days` from balldontlie. [] on failure."""
+    api_key = os.environ.get("BALLDONTLIE_API_KEY", "").strip()
+    if not api_key:
+        return []
+
+    if (BDL_SCHED_CACHE.exists()
+            and time.time() - BDL_SCHED_CACHE.stat().st_mtime < LIVE_CACHE_MAX_AGE):
+        try:
+            return json.loads(BDL_SCHED_CACHE.read_text())
+        except Exception:
+            pass
+
+    start = datetime.now(timezone.utc).date()
+    end = start + timedelta(days=days)
+    payloads = _bdl_paginate(start, end, api_key)
+    if payloads is None:
+        return []
+    games = _parse_bdl_schedule(payloads)
+    try:
+        BDL_SCHED_CACHE.write_text(json.dumps(games))
+    except Exception:
+        pass
+    return games
 
 
 def _load_games() -> list[dict]:
@@ -406,6 +464,28 @@ def forecast() -> dict:
             "history": history,
         })
 
+    # upcoming games: pre-tip win probabilities from the current ratings.
+    # Games in a later season get the same 25% reversion the model applies
+    # between seasons, so an offseason schedule isn't forecast on stale ratings.
+    ratings = run["ratings"]
+    reverted = {t: r + SEASON_REVERSION * (MEAN_RATING - r) for t, r in ratings.items()}
+    upcoming_games = []
+    for g in _fetch_bdl_schedule()[:SCHEDULE_LIMIT]:
+        rr = reverted if g["season"] > final_season else ratings
+        r_home = rr.get(g["home"], INITIAL_RATING)
+        r_away = rr.get(g["away"], INITIAL_RATING)
+        bonus = 0.0 if g["neutral"] else HOME_ADVANTAGE
+        p_home = elo_win_prob((r_home + bonus) - r_away)
+        upcoming_games.append({
+            "date": g["date"],
+            "status": "upcoming",
+            "label": "Playoffs" if g["playoffs"] else None,
+            "home": team_blob({"name": g["home"], "rating": round(r_home),
+                               "win_prob": round(p_home, 3)}),
+            "away": team_blob({"name": g["away"], "rating": round(r_away),
+                               "win_prob": round(1 - p_home, 3)}),
+        })
+
     return {
         "slug": "nba-elo",
         "name": "NBA Elo Ratings",
@@ -428,7 +508,7 @@ def forecast() -> dict:
         "games": [
             {**g, "home": team_blob(g["home"]), "away": team_blob(g["away"])}
             for g in run["last_games"]
-        ],
+        ] + upcoming_games,
         "standings": standings,
         "standings_title": f"Current Elo ratings (through {through})",
         "column_labels": {"rating": "Elo", "change": f"{season_label} Δ",

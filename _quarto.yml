@@ -13,8 +13,14 @@ website:
     background: "#ffffff"
     foreground: "#555555"
     left:
-      - text: "Forecasts"
-        href: index.qmd
+      - text: "FIFA World Cup"
+        href: forecasts/world-cup-2026.qmd
+      - text: "NBA"
+        menu:
+          - text: "Elo Ratings"
+            href: forecasts/nba-elo.qmd
+          - text: "RAPTOR Player Ratings"
+            href: forecasts/nba-raptor.qmd
       - text: "Methodology"
         href: about.qmd
       - text: "GitHub"

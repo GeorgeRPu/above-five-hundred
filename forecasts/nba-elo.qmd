@@ -22,6 +22,8 @@ print(render.standings_table(f))
 
 ```{python}
 #| output: asis
+print(render.games_section(f, "upcoming", "Upcoming games",
+                           "Win probability from Elo ratings"))
 print(render.games_section(f, "final", "Latest games",
                            f"Through {f['data_through']} — forecast vs. outcome"))
 ```

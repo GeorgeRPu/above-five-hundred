@@ -73,7 +73,7 @@ def team_cell(team: dict, sub: str | None = None) -> str:
     sub_html = f' <span class="team-sub">{escape(str(sub))}</span>' if sub else ""
     return (
         f'<div class="team-cell">'
-        f'<span class="team-dot" style="background:{color}">{escape(abbr)}</span>'
+        f'<span class="team-sym" style="color:{color}">{escape(abbr)}</span>'
         f'<span><span class="team-name">{name}</span>{sub_html}</span>'
         f"</div>"
     )
