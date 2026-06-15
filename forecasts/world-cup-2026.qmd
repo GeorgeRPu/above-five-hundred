@@ -23,7 +23,7 @@ columns = [
     {"key": "attack", "label": "Off", "kind": "dec", "hide_sm": True},
     {"key": "defense", "label": "Def", "kind": "dec", "hide_sm": True},
     {"key": "group", "label": "Group", "kind": "text"},
-    {"key": "history", "label": "Trend", "kind": "spark", "hide_sm": True},
+    {"key": "history", "label": "Since Jun '24", "kind": "spark", "hide_sm": True},
     {"key": "r32_prob", "label": "Make round of 32", "kind": "prob"},
     {"key": "qf_prob", "label": "Make quarters", "kind": "prob"},
     {"key": "sf_prob", "label": "Make semis", "kind": "prob"},

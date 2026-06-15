@@ -84,23 +84,35 @@ def team_cell(team: dict, sub: str | None = None) -> str:
     )
 
 
-def sparkline(series, width: int = 110, height: int = 28) -> str:
+def sparkline(series, width: int = 140, height: int = 28) -> str:
     if not series or len(series) < 2:
         return ""
     lo, hi = min(series), max(series)
     span = (hi - lo) or 1.0
     pad = 3
+    label_w = 30
+    chart_w = width - label_w
     pts = []
     for i, v in enumerate(series):
-        x = pad + (i / (len(series) - 1)) * (width - 2 * pad)
+        x = pad + (i / (len(series) - 1)) * (chart_w - 2 * pad)
         y = height - pad - ((v - lo) / span) * (height - 2 * pad)
         pts.append(f"{x:.1f},{y:.1f}")
     lx, ly = pts[-1].split(",")
+    hi_r, lo_r = round(hi), round(lo)
+    lx_label = chart_w + 4
+    if hi_r != lo_r:
+        labels = (
+            f'<text class="spark-label" x="{lx_label}" y="{pad + 7}">{hi_r}</text>'
+            f'<text class="spark-label" x="{lx_label}" y="{height - pad + 1}">{lo_r}</text>'
+        )
+    else:
+        labels = f'<text class="spark-label" x="{lx_label}" y="{height / 2 + 3:.0f}">{hi_r}</text>'
     return (
         f'<svg class="spark" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}">'
         f'<polyline points="{" ".join(pts)}"></polyline>'
         f'<circle class="spark-dot" cx="{lx}" cy="{ly}" r="2.5"></circle>'
+        f'{labels}'
         f"</svg>"
     )
 
@@ -178,6 +190,7 @@ def standings_table(forecast: dict) -> str:
     if not rows:
         return ""
     labels = {"rating": "Rating", "change": "7-day", "record": "Record",
+              "trend": "Trend",
               "playoff_prob": "Make playoffs", "title_prob": "Win title"}
     labels.update(forecast.get("column_labels", {}))
     has_probs = any(r.get("playoff_prob") is not None or r.get("title_prob") is not None
@@ -205,7 +218,7 @@ def standings_table(forecast: dict) -> str:
         '<th class="l">Team</th>',
         f'<th>{labels["rating"]}</th>',
         f'<th class="hide-sm">{labels["change"]}</th>',
-        '<th class="hide-sm">Trend</th>',
+        f'<th class="hide-sm">{labels["trend"]}</th>',
         f'<th>{labels["record"]}</th>',
     ]
     if has_probs:

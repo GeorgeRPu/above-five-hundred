@@ -514,6 +514,6 @@ def forecast() -> dict:
         "standings": standings,
         "standings_title": f"Current Elo ratings (through {through})",
         "column_labels": {"rating": "Elo", "change": f"{season_label} Δ",
-                          "record": season_label},
+                          "record": season_label, "trend": "Season"},
         "backtest": _backtest(run["predictions"]),
     }

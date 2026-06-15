@@ -447,7 +447,7 @@ details.model-performance {
    Sparklines
    -------------------------------------------------------------------------- */
 
-.spark { display: block; }
+.spark { display: inline-block; vertical-align: middle; }
 
 .spark polyline {
   fill: none;
@@ -456,6 +456,12 @@ details.model-performance {
 }
 
 .spark .spark-dot { fill: var(--accent-orange); }
+
+.spark-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--ink-faint);
+}
 
 /* --------------------------------------------------------------------------
    Methodology box & footer
