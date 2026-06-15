@@ -1,60 +1,54 @@
-"""Box-RAPTOR: a reconstruction of RAPTOR's box-score component.
+"""Box-RAPTOR: a reconstruction of RAPTOR from box scores, for every season.
 
-538 retired RAPTOR after 2021-22, and the full rating needs play-by-play
-and player-tracking inputs that were never published. Its *box* component,
-though, is just a function of standard box-score rate stats — and that we
-can rebuild. This module learns the box→RAPTOR mapping from 538's own data
-(above500/data/nba_player_box.csv.gz, every player-season 1976-77 through
-2018-19 with both box stats and RAPTOR) and applies it to seasons 538 never
-covered, producing a calibrated *estimate* of each recent player's RAPTOR.
+538's full RAPTOR needs play-by-play and player-tracking inputs that were
+never published, and 538 retired the metric after 2021-22. Its *box*
+component, though, is just a function of standard box-score rate stats — and
+that we can rebuild. This module learns the box→RAPTOR mapping from 538's own
+data (above500/data/nba_player_box.csv.gz, player-seasons 1976-77 through
+2018-19 carrying both box stats and RAPTOR) and then scores *every* season
+from box scores alone, producing one calibrated Box-RAPTOR rating per player
+per year — for the seasons 538 published and the ones it never reached alike.
+Nothing here copies 538's published RAPTOR; every rating the site shows is the
+model's own estimate.
 
 Two wrinkles make the estimate honest across eras:
 
-* Modern box-score rates live on a different scale than 538's pace-adjusted,
-  era-normalized inputs, so each new season's features are expressed relative
-  to that season's own distribution before scoring, and the resulting ratings
-  are recentred so the minutes-weighted league average is zero (RAPTOR is an
-  above-average rating). Without this every modern season prints ~5 points
-  low.
+* Box-score rates live on different scales across eras (and between 538's
+  pace-adjusted inputs and raw nba.com totals), so each season's features are
+  expressed relative to that season's own distribution before scoring, and the
+  resulting ratings are recentred so the minutes-weighted league average is
+  zero (RAPTOR is an above-average rating).
 * Box scores can't see the on/off half of RAPTOR, so the estimate is
   deliberately conservative at the extremes — a superstar's box estimate sits
   below their true RAPTOR. The held-out fidelity numbers (see
   `fidelity_backtest`) report exactly how close it gets.
 
-Recent box scores come from the committed floor (NocturneBear's nba.com dump
-through 2023-24) plus a best-effort live top-up from balldontlie for newer
-seasons; the live half is CI-only and degrades to the floor on any failure.
+Box scores come from free sources, stitched into one continuous history:
+538's historical file supplies named box stats through 2018-19, and the
+committed floor (NocturneBear's nba.com dump through 2023-24, then Basketball-
+Reference season totals) carries it to the current season. The floor is built
+offline by scripts/prepare_recent_box.py, so rendering makes no API calls;
+re-run that script and commit to push coverage forward each season.
 """
 
 from __future__ import annotations
 
 import csv
 import gzip
-import json
 import math
-import os
-import time
-import urllib.error
-import urllib.parse
-import urllib.request
-from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
 TRAIN_FILE = Path(__file__).resolve().parent / "data" / "nba_player_box.csv.gz"
 RECENT_FILE = Path(__file__).resolve().parent / "data" / "nba_recent_box.csv.gz"
 
-LAST_OFFICIAL_SEASON = 2022     # 538's final RAPTOR season (2021-22)
+# 538's historical box file supplies named features through this season; the
+# committed recent floor covers every season after it.
+LAST_HISTORICAL_SEASON = 2019
 FEATURES = ["p36", "r36", "a36", "sb36", "to36", "ts", "fg3ar", "ftar", "mpg"]
 RIDGE_LAMBDA = 15.0
 MIN_TRAIN_MIN = 200            # ignore deep-bench noise when fitting
 MIN_RATE_MIN = 500            # minutes a recent player needs to be rated
-
-# balldontlie live top-up (CI only; mirrors above500.nba_elo's discipline).
-# A full season of game-level stats is ~250 pages, so the cap is generous; if
-# it's hit the season is dropped rather than rated from half its games.
-BDL_BASES = ("https://api.balldontlie.io/nba/v1", "https://api.balldontlie.io/v1")
-BDL_MAX_REQUESTS = 400
 
 
 # ---------------------------------------------------------------------------
@@ -121,8 +115,9 @@ def _train_rows() -> list[dict]:
                 continue
             if mn < MIN_TRAIN_MIN:
                 continue
-            rows.append({"season": int(r["season"]), "x": xs, "o": o, "d": d,
-                         "min": mn, "war": war})
+            rows.append({"season": int(r["season"]),
+                         "player_id": r["player_id"], "name": r["player_name"],
+                         "x": xs, "o": o, "d": d, "min": mn, "war": war})
     return rows
 
 
@@ -215,145 +210,100 @@ def _rate_season(players: list[dict]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# recent box scores: committed floor + live top-up
+# recent box scores: the committed floor (scripts/prepare_recent_box.py)
 # ---------------------------------------------------------------------------
 
 @lru_cache(maxsize=1)
 def _recent_totals() -> dict[int, dict[str, dict]]:
-    """{season: {name: totals}} from the committed floor plus any live seasons."""
+    """{season: {name: totals}} from the committed floor.
+
+    The floor is built offline from free sources (NocturneBear + Basketball-
+    Reference) and reaches the current season, so there is no render-time API
+    call here — re-run scripts/prepare_recent_box.py to push it forward.
+    """
     seasons: dict[int, dict[str, dict]] = {}
     with gzip.open(RECENT_FILE, "rt", newline="") as f:
         for r in csv.DictReader(f):
             s = int(r["season"])
             seasons.setdefault(s, {})[r["name"]] = {
                 "g": int(r["g"]), "min": float(r["min"]),
+                "team": r.get("team", ""),
                 **{k: int(r[k]) for k in
                    ("fga", "fg3a", "fta", "trb", "ast", "stl", "blk", "tov", "pts")},
             }
-
-    floor = max(seasons) if seasons else LAST_OFFICIAL_SEASON
-    for s, totals in _fetch_live_totals(after_season=floor).items():
-        seasons[s] = totals          # live wins for seasons past the floor
     return seasons
 
 
-def _fetch_live_totals(after_season: int) -> dict[int, dict[str, dict]]:
-    """Player-season box totals for seasons after the committed floor, from
-    balldontlie. CI-only and best-effort: any failure yields no live seasons,
-    and strict per-row validation means a wrong API contract degrades to {}.
+def _rate_player_seasons(players: list[dict]) -> list[dict]:
+    """Calibrate Box-RAPTOR for player dicts carrying season/name/x/min.
+
+    Players are grouped by season and each season is standardized and recentred
+    on its own (>=20 rated players, each above MIN_RATE_MIN). player_id, when
+    present, passes through. Returns flat estimate dicts, season order.
     """
-    api_key = os.environ.get("BALLDONTLIE_API_KEY", "").strip()
-    if not api_key:
-        return {}
-
-    this_season = datetime.now(timezone.utc).year + (
-        1 if datetime.now(timezone.utc).month >= 10 else 0)
-    targets = list(range(after_season + 1, this_season + 1))
-    if not targets:
-        return {}
-
-    out: dict[int, dict[str, dict]] = {}
-    for base in BDL_BASES:
-        try:
-            for season in targets:
-                totals = _fetch_live_season(base, api_key, season)
-                if totals:
-                    out[season] = totals
-            if out:
-                return out
-        except Exception:
-            out.clear()
+    by_season: dict[int, list[dict]] = {}
+    for p in players:
+        if p["min"] < MIN_RATE_MIN:
             continue
+        by_season.setdefault(p["season"], []).append(p)
+
+    out = []
+    for season in sorted(by_season):
+        group = by_season[season]
+        if len(group) < 20:          # too thin to calibrate a season
+            continue
+        for r in _rate_season(group):
+            out.append({"season": r["season"], "name": r["name"],
+                        "player_id": r.get("player_id"), "team": r.get("team", ""),
+                        "raptor_off": r["raptor_off"], "raptor_def": r["raptor_def"],
+                        "raptor_total": r["raptor_total"], "war": r["war"],
+                        "min": r["min"], "est": True})
     return out
 
 
-def _fetch_live_season(base: str, api_key: str, season: int) -> dict[str, dict]:
-    """Aggregate one season of balldontlie player game stats into totals."""
-    totals: dict[str, dict] = {}
-    cursor, requests = None, 0
-    # balldontlie seasons are start-year; our `season` is the end-year.
-    # postseason=false keeps this in step with the regular-season committed floor.
-    params_base = {"seasons[]": str(season - 1), "postseason": "false",
-                   "per_page": "100"}
-    while requests < BDL_MAX_REQUESTS:
-        params = dict(params_base)
-        if cursor is not None:
-            params["cursor"] = str(cursor)
-        req = urllib.request.Request(
-            f"{base}/stats?{urllib.parse.urlencode(params)}",
-            headers={"Authorization": api_key})
-        requests += 1
-        try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                payload = json.loads(resp.read())
-        except urllib.error.HTTPError as e:
-            if e.code == 429:                      # rate limited: wait and retry
-                time.sleep(int(e.headers.get("Retry-After", 10)))
-                requests -= 1
-                continue
-            raise
-        for s in payload.get("data", []):
-            _accumulate_live_stat(totals, s)
-        cursor = (payload.get("meta") or {}).get("next_cursor")
-        if cursor is None:
-            return totals
-        time.sleep(0.25)
-    return {}   # page cap hit: treat as failure rather than a partial season
-
-
-def _accumulate_live_stat(totals: dict[str, dict], s: dict) -> None:
-    player = s.get("player") or {}
-    name = " ".join(x for x in (player.get("first_name"), player.get("last_name")) if x)
-    mn = s.get("min")
-    if isinstance(mn, str):
-        mn = (int(mn.split(":")[0]) + int(mn.split(":")[1]) / 60) if ":" in mn \
-            else (float(mn) if mn.replace(".", "", 1).isdigit() else 0.0)
-    if not name or not mn or mn <= 0:
-        return
-    fields = {"fga": "fga", "fg3a": "fg3a", "fta": "fta", "ast": "ast",
-              "stl": "stl", "blk": "blk", "tov": "turnover", "pts": "pts"}
-    row = {k: s.get(v) for k, v in fields.items()}
-    row["trb"] = s.get("reb")
-    if any(not isinstance(row[k], (int, float)) for k in
-           ("fga", "fg3a", "fta", "trb", "ast", "stl", "blk", "tov", "pts")):
-        return
-    a = totals.setdefault(name, {"g": 0, "min": 0.0,
-                                 **{k: 0 for k in
-                                    ("fga", "fg3a", "fta", "trb", "ast",
-                                     "stl", "blk", "tov", "pts")}})
-    a["g"] += 1
-    a["min"] += mn
-    for k in ("fga", "fg3a", "fta", "trb", "ast", "stl", "blk", "tov", "pts"):
-        a[k] += row[k]
+@lru_cache(maxsize=1)
+def _estimate_historical() -> list[dict]:
+    """Box-RAPTOR for the seasons 538's historical box file covers (<=2018-19)."""
+    players = [{"season": r["season"], "name": r["name"],
+                "player_id": r["player_id"], "x": r["x"], "min": r["min"]}
+               for r in _train_rows()]
+    return _rate_player_seasons(players)
 
 
 @lru_cache(maxsize=1)
 def estimate_recent() -> list[dict]:
-    """Calibrated Box-RAPTOR for every rated recent player-season (>538's run).
+    """Box-RAPTOR for seasons after 538's box history (recent floor + live).
 
-    Each dict: season, name, raptor_off, raptor_def, raptor_total, war, min,
-    est=True. Empty list if the recent data can't be loaded.
+    Empty list if the recent data can't be loaded.
     """
     try:
         seasons = _recent_totals()
     except Exception:
         return []
-
-    out = []
-    for season, totals in sorted(seasons.items()):
-        players = []
+    players = []
+    for season, totals in seasons.items():
         for name, t in totals.items():
             x = _features(t)
-            if x is None or t["min"] < MIN_RATE_MIN:
+            if x is None:
                 continue
-            players.append({"season": season, "name": name, "x": x, "min": t["min"]})
-        if len(players) < 20:        # too thin to calibrate a season
-            continue
-        for r in _rate_season(players):
-            out.append({"season": r["season"], "name": r["name"],
-                        "raptor_off": r["raptor_off"], "raptor_def": r["raptor_def"],
-                        "raptor_total": r["raptor_total"], "war": r["war"],
-                        "min": r["min"], "est": True})
+            players.append({"season": season, "name": name, "x": x,
+                            "min": t["min"], "team": t.get("team", "")})
+    return _rate_player_seasons(players)
+
+
+@lru_cache(maxsize=1)
+def estimate_all() -> list[dict]:
+    """Calibrated Box-RAPTOR for every rated player-season, oldest to newest.
+
+    Stitches the historical estimate (538's box file, <=2018-19) and the recent
+    estimate (committed floor + live top-up, 2019-20 on), which cover disjoint
+    season ranges. Each dict: season, name, player_id (None for recent seasons),
+    raptor_off, raptor_def, raptor_total, war, min, est=True.
+    """
+    historical = _estimate_historical()
+    seen = {e["season"] for e in historical}
+    out = historical + [e for e in estimate_recent() if e["season"] not in seen]
+    out.sort(key=lambda e: (e["season"], -e["war"]))
     return out
 
 

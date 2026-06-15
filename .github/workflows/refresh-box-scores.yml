@@ -1,0 +1,51 @@
+name: Refresh recent box scores
+
+# Rebuilds above500/data/nba_recent_box.csv.gz from the free sources
+# (NocturneBear + Basketball-Reference) so Box-RAPTOR stays current without a
+# paid API. Runs weekly during the NBA season; in the off-season the new
+# season's Basketball-Reference page 404s and the run is a no-op. When the data
+# changes it commits to main and dispatches the deploy workflow to re-render
+# (a push by GITHUB_TOKEN won't trigger deploy on its own; the daily deploy is
+# the backstop regardless).
+
+on:
+  schedule:
+    # 12:00 UTC every Monday, Oct-Jun only (NBA season; skips Jul-Sep)
+    - cron: "0 12 * 1-6,10-12 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: refresh-box-scores
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Rebuild the recent box-score floor
+        run: python scripts/prepare_recent_box.py
+
+      - name: Commit and deploy if the data changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- above500/data/nba_recent_box.csv.gz; then
+            echo "No change to nba_recent_box.csv.gz; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add above500/data/nba_recent_box.csv.gz
+          git commit -m "Refresh recent box scores (automated)"
+          git push
+          gh workflow run deploy.yml --ref main

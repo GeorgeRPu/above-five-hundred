@@ -422,7 +422,7 @@ def regression_backtest_table(backtest: dict) -> str:
         + "".join(rows)
         + "</tbody></table>"
         + '<p class="table-note">Each projection is scored against the player\'s actual '
-        + "next-season RAPTOR. Mean absolute error and RMSE measure how far off the "
+        + "next-season Box-RAPTOR. Mean absolute error and RMSE measure how far off the "
         + "forecasts are (lower is better); correlation rewards ranking players correctly "
         + "(higher is better). The baselines simply carry a player's prior-season rating "
         + "forward.</p>"
