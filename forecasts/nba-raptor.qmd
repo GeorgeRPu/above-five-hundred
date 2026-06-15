@@ -13,18 +13,14 @@ print(f'<span class="kicker">{escape(f["league"])}</span>')
 print(f'<h1 class="headline">{escape(f["name"])}</h1>')
 print(f'<p class="dek">{escape(f["description"])}</p>')
 print(render.byline(f))
-print('<p class="table-note">Every rating is a <strong>Box-RAPTOR estimate</strong> — '
-      'RAPTOR\'s box-score component, rebuilt from 538\'s own data and calibrated to '
-      'their ratings (fidelity below) — computed on one scale for every season since '
-      '1976-77. 538 retired RAPTOR after 2021-22 and never released the full model.</p>')
 ```
 
 ```{python}
 #| output: asis
-title = f'Box-RAPTOR — {f["season_label"]}'
-note = "Box-RAPTOR estimate · best by WAR"
-print(render.odds_table(
-    f["leaderboard"],
+print(render.season_picker_table(
+    leaderboards=f["leaderboards"],
+    seasons=f["all_seasons"],
+    default_season=f["last_season"],
     columns=[
         {"key": "name", "kind": "team", "label": "Player"},
         {"key": "mp", "kind": "num", "label": "Minutes", "hide_sm": True},
@@ -34,7 +30,8 @@ print(render.odds_table(
         {"key": "history", "kind": "spark", "label": "Career", "hide_sm": True},
         {"key": "war", "kind": "dec", "label": "WAR"},
     ],
-    title=title, note=note, sort_key="war",
+    title="Box-RAPTOR Leaderboard",
+    note="Box-RAPTOR estimate · best by WAR · regular season",
 ))
 ```
 

@@ -6,6 +6,7 @@ Quarto pages call these from Python cells and emit the result with
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from html import escape
 
@@ -236,9 +237,9 @@ def standings_table(forecast: dict) -> str:
     )
 
 
-def odds_table(rows: list[dict], columns: list[dict], title: str, note: str = "",
-               sort_key: str | None = None) -> str:
-    """Generic ratings/odds table. Column kinds: team, num, text, spark, prob."""
+def _odds_table_html(rows: list[dict], columns: list[dict],
+                     sort_key: str | None = None) -> str:
+    """Render a <table class="fte"> element for odds-style data (no header)."""
     if sort_key:
         rows = sorted(rows, key=lambda r: r.get(sort_key) or 0, reverse=True)
 
@@ -275,13 +276,146 @@ def odds_table(rows: list[dict], columns: list[dict], title: str, note: str = ""
         body.append("<tr>" + "".join(cells) + "</tr>")
 
     return (
-        section_head(title, note)
-        + '<table class="fte"><thead><tr>'
+        '<table class="fte"><thead><tr>'
         + "".join(head)
         + "</tr></thead><tbody>"
         + "".join(body)
         + "</tbody></table>"
     )
+
+
+def odds_table(rows: list[dict], columns: list[dict], title: str, note: str = "",
+               sort_key: str | None = None) -> str:
+    """Generic ratings/odds table. Column kinds: team, num, text, spark, prob."""
+    return section_head(title, note) + _odds_table_html(rows, columns, sort_key)
+
+
+def season_picker_table(leaderboards: dict, seasons: list[int],
+                        default_season: int, columns: list[dict],
+                        title: str, note: str = "") -> str:
+    """Leaderboard table with a season dropdown and regular-season/playoff toggle.
+
+    The data for every season (both regular season and playoffs) is emitted once
+    as a JSON island and the visible table is built client-side on demand. This
+    keeps the page out of pandoc's HTML parser — pre-rendering all 100 tables as
+    markup made a single render take minutes — while preserving the exact look of
+    the server-side tables (`team_cell`, `sparkline`, the `.fte` table).
+    """
+
+    def _label(s):
+        return f"{s - 1}-{str(s)[2:]}"
+
+    options = []
+    for s in seasons:
+        selected = " selected" if s == default_season else ""
+        has_po = "true" if leaderboards.get(s, {}).get("po") else "false"
+        options.append(
+            f'<option value="{s}" data-has-po="{has_po}"{selected}>'
+            f'{escape(_label(s))}</option>')
+
+    header = (
+        f'<div class="section-head">'
+        f'<h2>{escape(title)}</h2>'
+        f'<span class="note" id="raptor-note">{escape(note)}</span>'
+        f'</div>')
+
+    picker = (
+        f'<div class="season-controls">'
+        f'<select class="season-select" id="raptor-season">'
+        f'{"".join(options)}</select>'
+        f'<div class="type-toggle" id="raptor-type-toggle">'
+        f'<button class="toggle-btn active" data-type="rs">Regular Season</button>'
+        f'<button class="toggle-btn" data-type="po">Playoffs</button>'
+        f'</div></div>')
+
+    payload = {
+        "accents": ACCENTS,
+        "columns": [{"key": c["key"], "kind": c["kind"], "label": c["label"],
+                     "hide_sm": bool(c.get("hide_sm"))} for c in columns],
+        "data": {str(s): {t: leaderboards.get(s, {}).get(t, [])
+                          for t in ("rs", "po")} for s in seasons},
+    }
+    # Escape "<" so the JSON can never contain a literal "</script>" sequence.
+    data_json = json.dumps(payload, separators=(",", ":")).replace("<", "\\u003c")
+    data = (f'<script type="application/json" id="raptor-data">{data_json}</script>')
+    container = '<div id="raptor-table"></div>'
+
+    return header + picker + data + container + _SEASON_PICKER_JS
+
+
+# Client-side renderer for season_picker_table. Mirrors team_cell / sparkline /
+# _odds_table_html so the JS-built tables are byte-for-byte the server's markup.
+_SEASON_PICKER_JS = """\
+<script>
+(function(){
+var cfg=JSON.parse(document.getElementById("raptor-data").textContent),
+    cols=cfg.columns,accents=cfg.accents,
+    sel=document.getElementById("raptor-season"),
+    toggle=document.getElementById("raptor-type-toggle"),
+    note=document.getElementById("raptor-note"),
+    out=document.getElementById("raptor-table"),
+    btns=toggle.querySelectorAll(".toggle-btn"),cur="rs";
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function accent(seed){var h=0,s=String(seed);
+    for(var i=0;i<s.length;i++){h=(Math.imul(h,31)+s.charCodeAt(i))>>>0;}
+    return accents[h%accents.length];}
+function teamCell(r){
+    var abbr=r.abbr||(r.name||"?").slice(0,3).toUpperCase(),name=esc(r.name||abbr),mk;
+    if(r.logo){mk='<img class="team-logo" src="'+esc(r.logo)+'" alt="'+esc(abbr)+'">';}
+    else{mk='<span class="team-sym" style="color:'+accent(abbr)+'">'+esc(abbr)+'</span>';}
+    return '<div class="team-cell">'+mk+'<span><span class="team-name">'+name+
+        '</span></span></div>';}
+function spark(series){
+    if(!series||series.length<2)return"";
+    var w=140,h=28,lo=Math.min.apply(null,series),hi=Math.max.apply(null,series),
+        span=(hi-lo)||1,pad=3,chartW=w-30,pts=[];
+    for(var i=0;i<series.length;i++){
+        var x=pad+(i/(series.length-1))*(chartW-2*pad),
+            y=h-pad-((series[i]-lo)/span)*(h-2*pad);
+        pts.push(x.toFixed(1)+","+y.toFixed(1));}
+    var last=pts[pts.length-1].split(","),hiR=Math.round(hi),loR=Math.round(lo),
+        lxL=chartW+4,labels;
+    if(hiR!==loR){labels='<text class="spark-label" x="'+lxL+'" y="'+(pad+7)+'">'+hiR+
+        '</text><text class="spark-label" x="'+lxL+'" y="'+(h-pad+1)+'">'+loR+'</text>';}
+    else{labels='<text class="spark-label" x="'+lxL+'" y="'+(h/2+3).toFixed(0)+'">'+
+        hiR+'</text>';}
+    return '<svg class="spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+
+        '"><polyline points="'+pts.join(" ")+'"></polyline><circle class="spark-dot" cx="'+
+        last[0]+'" cy="'+last[1]+'" r="2.5"></circle>'+labels+'</svg>';}
+function cell(r,c){var v=r[c.key],hide=c.hide_sm?" hide-sm":"";
+    if(c.kind==="team")return '<td class="l">'+teamCell(r)+'</td>';
+    if(c.kind==="spark")return '<td class="'+(c.hide_sm?"hide-sm":"")+'">'+
+        spark(v||[])+'</td>';
+    if(c.kind==="num")return '<td class="num'+hide+'">'+(v!=null?Math.round(v):"\\u2014")+
+        '</td>';
+    if(c.kind==="dec")return '<td class="num'+hide+'">'+(v!=null?v.toFixed(1):"\\u2014")+
+        '</td>';
+    return '<td class="num'+hide+'">'+esc(v!=null?v:"\\u2014")+'</td>';}
+function table(rows){
+    var head=cols.map(function(c){
+        var cls=c.kind==="team"?' class="l"':(c.hide_sm?' class="hide-sm"':"");
+        return '<th'+cls+'>'+esc(c.label)+'</th>';}).join(""),
+        body=rows.map(function(r){
+        return '<tr>'+cols.map(function(c){return cell(r,c);}).join("")+'</tr>';}).join("");
+    return '<'+'table class="fte"><thead><tr>'+head+'</tr></thead><tbody>'+body+
+        '</tbody></'+'table>';}
+function render(){
+    var s=sel.value,po=sel.selectedOptions[0].dataset.hasPo==="true";
+    btns[1].style.display=po?"":"none";
+    if(!po&&cur==="po"){cur="rs";btns[0].classList.add("active");
+        btns[1].classList.remove("active");}
+    var rows=(cfg.data[s]&&cfg.data[s][cur])||[];
+    out.innerHTML=table(rows);
+    var lbl=cur==="po"?"playoffs":"regular season";
+    note.textContent="Box-RAPTOR estimate \\u00b7 top "+rows.length+" by WAR \\u00b7 "+lbl;}
+sel.addEventListener("change",render);
+btns.forEach(function(b){b.addEventListener("click",function(){
+    cur=b.dataset.type;btns.forEach(function(x){x.classList.remove("active");});
+    b.classList.add("active");render();});});
+render();
+})();
+</script>"""
 
 
 def _flag_img(src: str | None, abbr: str) -> str:

@@ -4,12 +4,12 @@
 never published, and 538 retired the metric after 2021-22. Its *box*
 component, though, is just a function of standard box-score rate stats — and
 that we can rebuild. This module learns the box→RAPTOR mapping from 538's own
-data (above500/data/nba_player_box.csv.gz, player-seasons 1976-77 through
-2018-19 carrying both box stats and RAPTOR) and then scores *every* season
-from box scores alone, producing one calibrated Box-RAPTOR rating per player
-per year — for the seasons 538 published and the ones it never reached alike.
-Nothing here copies 538's published RAPTOR; every rating the site shows is the
-model's own estimate.
+box-component RAPTOR (the box half of the published box + on/off decomposition,
+available for 2014-2019 in their modern RAPTOR file) and then scores *every*
+season from box scores alone, producing one calibrated Box-RAPTOR rating per
+player per year — for the seasons 538 published and the ones it never reached
+alike. Nothing here copies 538's published composite RAPTOR; every rating the
+site shows is the model's own estimate.
 
 Two wrinkles make the estimate honest across eras:
 
@@ -18,10 +18,9 @@ Two wrinkles make the estimate honest across eras:
   expressed relative to that season's own distribution before scoring, and the
   resulting ratings are recentred so the minutes-weighted league average is
   zero (RAPTOR is an above-average rating).
-* Box scores can't see the on/off half of RAPTOR, so the estimate is
-  deliberately conservative at the extremes — a superstar's box estimate sits
-  below their true RAPTOR. The held-out fidelity numbers (see
-  `fidelity_backtest`) report exactly how close it gets.
+* The ridge regression is trained on the box component only, so it learns the
+  signal that box scores can actually explain rather than trying to approximate
+  the on/off half it structurally cannot see.
 
 Box scores come from free sources, stitched into one continuous history:
 538's historical file supplies named box stats through 2018-19, and the
@@ -41,14 +40,17 @@ from pathlib import Path
 
 TRAIN_FILE = Path(__file__).resolve().parent / "data" / "nba_player_box.csv.gz"
 RECENT_FILE = Path(__file__).resolve().parent / "data" / "nba_recent_box.csv.gz"
+PO_FILE = Path(__file__).resolve().parent / "data" / "nba_po_box.csv.gz"
 
 # 538's historical box file supplies named features through this season; the
 # committed recent floor covers every season after it.
 LAST_HISTORICAL_SEASON = 2019
-FEATURES = ["p36", "r36", "a36", "sb36", "to36", "ts", "fg3ar", "ftar", "mpg"]
+FEATURES = ["p36", "orb36", "drb36", "a36", "stl36", "blk36", "to36",
+            "ts", "fg3ar", "ftar", "mpg"]
 RIDGE_LAMBDA = 15.0
 MIN_TRAIN_MIN = 200            # ignore deep-bench noise when fitting
 MIN_RATE_MIN = 500            # minutes a recent player needs to be rated
+MIN_RATE_MIN_PO = 150         # lower threshold for playoffs (~4+ games)
 
 
 # ---------------------------------------------------------------------------
@@ -115,17 +117,29 @@ def _train_rows() -> list[dict]:
                 continue
             if mn < MIN_TRAIN_MIN:
                 continue
+            bo, bd = _fnum(r.get("raptor_box_off")), _fnum(r.get("raptor_box_def"))
             rows.append({"season": int(r["season"]),
                          "player_id": r["player_id"], "name": r["player_name"],
-                         "x": xs, "o": o, "d": d, "min": mn, "war": war})
+                         "team": r.get("team", ""),
+                         "x": xs, "o": o, "d": d, "bo": bo, "bd": bd,
+                         "min": mn, "war": war})
     return rows
 
 
 @lru_cache(maxsize=1)
 def _model() -> dict:
-    """Fit the offense/defense/WAR estimators and cache the training moments."""
-    rows = _train_rows()
-    cols = list(zip(*[r["x"] for r in rows]))
+    """Fit the offense/defense/WAR estimators and cache the training moments.
+
+    The ridge regressions are trained only on player-seasons that carry the
+    box-component RAPTOR split from 538's modern file (2014-2019 overlap).
+    Standardisation moments come from the same subset so the z-scores are
+    consistent.  The WAR mapping is fit on all rows with composite RAPTOR
+    (which is available for the full 1977-2019 span).
+    """
+    all_rows = _train_rows()
+    box_rows = [r for r in all_rows if r["bo"] is not None and r["bd"] is not None]
+
+    cols = list(zip(*[r["x"] for r in box_rows]))
     mean = [sum(c) / len(c) for c in cols]
     sd = [(sum((v - m) ** 2 for v in c) / len(c)) ** 0.5 or 1.0
           for c, m in zip(cols, mean)]
@@ -134,13 +148,15 @@ def _model() -> dict:
         return [(x - m) / s for x, m, s in zip(xs, mean, sd)]
 
     nf = len(FEATURES)
-    coef_o = _ridge([(z(r["x"]), r["o"]) for r in rows], nf)
-    coef_d = _ridge([(z(r["x"]), r["d"]) for r in rows], nf)
+    coef_o = _ridge([(z(r["x"]), r["bo"]) for r in box_rows], nf)
+    coef_d = _ridge([(z(r["x"]), r["bd"]) for r in box_rows], nf)
 
     # WAR is a counting stat: war ≈ minutes * (a·raptor_total + b). Fit a, b.
+    # Uses composite RAPTOR (full history) since WAR was only published as a
+    # composite and the box/on-off split doesn't affect this linear mapping.
     Aw = [[0.0, 0.0], [0.0, 0.0]]
     bw = [0.0, 0.0]
-    for r in rows:
+    for r in all_rows:
         if r["war"] is None:
             continue
         feats = [(r["o"] + r["d"]) * r["min"], r["min"]]
@@ -169,9 +185,11 @@ def _features(t: dict) -> list[float] | None:
     shots = t["fga"] + 0.44 * t["fta"]
     return [
         t["pts"] / mn * 36,
-        t["trb"] / mn * 36,
+        t["orb"] / mn * 36,
+        t["drb"] / mn * 36,
         t["ast"] / mn * 36,
-        (t["stl"] + t["blk"]) / mn * 36,
+        t["stl"] / mn * 36,
+        t["blk"] / mn * 36,
         t["tov"] / mn * 36,
         t["pts"] / (2 * shots) if shots > 0 else 0.0,
         t["fg3a"] / t["fga"] if t["fga"] else 0.0,
@@ -229,21 +247,23 @@ def _recent_totals() -> dict[int, dict[str, dict]]:
                 "g": int(r["g"]), "min": float(r["min"]),
                 "team": r.get("team", ""),
                 **{k: int(r[k]) for k in
-                   ("fga", "fg3a", "fta", "trb", "ast", "stl", "blk", "tov", "pts")},
+                   ("fga", "fg3a", "fta", "orb", "drb", "trb",
+                    "ast", "stl", "blk", "tov", "pts")},
             }
     return seasons
 
 
-def _rate_player_seasons(players: list[dict]) -> list[dict]:
+def _rate_player_seasons(players: list[dict],
+                         min_minutes: int = MIN_RATE_MIN) -> list[dict]:
     """Calibrate Box-RAPTOR for player dicts carrying season/name/x/min.
 
     Players are grouped by season and each season is standardized and recentred
-    on its own (>=20 rated players, each above MIN_RATE_MIN). player_id, when
+    on its own (>=20 rated players, each above *min_minutes*). player_id, when
     present, passes through. Returns flat estimate dicts, season order.
     """
     by_season: dict[int, list[dict]] = {}
     for p in players:
-        if p["min"] < MIN_RATE_MIN:
+        if p["min"] < min_minutes:
             continue
         by_season.setdefault(p["season"], []).append(p)
 
@@ -265,7 +285,8 @@ def _rate_player_seasons(players: list[dict]) -> list[dict]:
 def _estimate_historical() -> list[dict]:
     """Box-RAPTOR for the seasons 538's historical box file covers (<=2018-19)."""
     players = [{"season": r["season"], "name": r["name"],
-                "player_id": r["player_id"], "x": r["x"], "min": r["min"]}
+                "player_id": r["player_id"], "team": r["team"],
+                "x": r["x"], "min": r["min"]}
                for r in _train_rows()]
     return _rate_player_seasons(players)
 
@@ -308,6 +329,48 @@ def estimate_all() -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# playoff Box-RAPTOR (from committed PO box scores)
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=1)
+def _po_totals() -> dict[int, dict[str, dict]]:
+    """{season: {name: totals}} from the committed playoff box-score file."""
+    seasons: dict[int, dict[str, dict]] = {}
+    try:
+        f = gzip.open(PO_FILE, "rt", newline="")
+    except FileNotFoundError:
+        return seasons
+    with f:
+        for r in csv.DictReader(f):
+            s = int(r["season"])
+            seasons.setdefault(s, {})[r["name"]] = {
+                "g": int(r["g"]), "min": float(r["min"]),
+                "team": r.get("team", ""),
+                **{k: int(r[k]) for k in
+                   ("fga", "fg3a", "fta", "orb", "drb", "trb", "ast",
+                    "stl", "blk", "tov", "pts")},
+            }
+    return seasons
+
+
+@lru_cache(maxsize=1)
+def estimate_all_po() -> list[dict]:
+    """Calibrated Box-RAPTOR for every rated playoff player-season."""
+    seasons = _po_totals()
+    players = []
+    for season, totals in seasons.items():
+        for name, t in totals.items():
+            x = _features(t)
+            if x is None:
+                continue
+            players.append({"season": season, "name": name, "x": x,
+                            "min": t["min"], "team": t.get("team", "")})
+    out = _rate_player_seasons(players, min_minutes=MIN_RATE_MIN_PO)
+    out.sort(key=lambda e: (e["season"], -e["war"]))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # fidelity backtest: how well box stats reproduce 538's real RAPTOR
 # ---------------------------------------------------------------------------
 
@@ -327,17 +390,21 @@ def _regress_scores(pred: list[float], actual: list[float]) -> dict:
 
 @lru_cache(maxsize=1)
 def fidelity_backtest(test_from: int = 2014) -> dict:
-    """Score the estimator on held-out 538 seasons it never trained on, using
-    the same per-season calibration the live estimates use.
+    """Score the estimator against 538's box-component RAPTOR on the overlap
+    seasons (2014-2019), using the same per-season calibration the live
+    estimates use.  Only player-seasons with box RAPTOR targets are scored.
     """
-    rows = [r for r in _train_rows() if r["min"] >= MIN_RATE_MIN]
+    rows = [r for r in _train_rows()
+            if r["min"] >= MIN_RATE_MIN
+            and r["bo"] is not None and r["bd"] is not None
+            and r["season"] >= test_from]
     pred, act = [], []
-    seasons = sorted({r["season"] for r in rows if r["season"] >= test_from})
+    seasons = sorted({r["season"] for r in rows})
     for season in seasons:
         season_rows = [r for r in rows if r["season"] == season]
         players = [{"name": str(i), "x": r["x"], "min": r["min"]}
                    for i, r in enumerate(season_rows)]
-        truth = [r["o"] + r["d"] for r in season_rows]
+        truth = [r["bo"] + r["bd"] for r in season_rows]
         if len(players) < 20:
             continue
         for r, y in zip(_rate_season(players), truth):

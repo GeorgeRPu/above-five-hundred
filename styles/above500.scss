@@ -444,6 +444,58 @@ details.model-performance {
 }
 
 /* --------------------------------------------------------------------------
+   Season picker (dropdown + RS/PO toggle)
+   -------------------------------------------------------------------------- */
+
+.season-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 12px 0 16px;
+  flex-wrap: wrap;
+}
+
+.season-select {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+
+  &:focus { outline: 2px solid var(--accent-blue); outline-offset: 1px; }
+}
+
+.type-toggle {
+  display: flex;
+}
+
+.toggle-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink-faint);
+  cursor: pointer;
+
+  &:first-child { border-radius: 3px 0 0 3px; }
+  &:last-child  { border-radius: 0 3px 3px 0; border-left: none; }
+
+  &.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  &.active + .toggle-btn { border-left-color: var(--ink); }
+}
+
+/* --------------------------------------------------------------------------
    Sparklines
    -------------------------------------------------------------------------- */
 

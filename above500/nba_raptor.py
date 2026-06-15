@@ -231,6 +231,42 @@ def _team_logo(abbr: str | None) -> str | None:
     return f"/assets/logos/nba/{abbr.lower()}.png" if abbr in valid else None
 
 
+def _format_entry(s: dict) -> dict:
+    return {
+        "name": s["name"], "abbr": s.get("team"), "mp": round(s["min"]),
+        "off": round(s["raptor_off"], 1), "dfn": round(s["raptor_def"], 1),
+        "raptor": round(s["raptor_total"], 1), "war": round(s["war"], 1),
+        "history": _history(s["name"]),
+        "logo": _team_logo(s.get("team")),
+    }
+
+
+def _all_leaderboards() -> tuple[dict[int, dict], list[int]]:
+    """Per-season leaderboards for RS and PO, newest first."""
+    rs_by_season: dict[int, list] = {}
+    for e in raptor_box.estimate_all():
+        rs_by_season.setdefault(e["season"], []).append(e)
+
+    po_by_season: dict[int, list] = {}
+    for e in raptor_box.estimate_all_po():
+        po_by_season.setdefault(e["season"], []).append(e)
+
+    all_seasons = sorted(set(rs_by_season) | set(po_by_season), reverse=True)
+
+    leaderboards: dict[int, dict] = {}
+    for season in all_seasons:
+        rs = sorted(rs_by_season.get(season, []),
+                    key=lambda s: s["war"], reverse=True)[:25]
+        po = sorted(po_by_season.get(season, []),
+                    key=lambda s: s["war"], reverse=True)[:25]
+        leaderboards[season] = {
+            "rs": [_format_entry(s) for s in rs],
+            "po": [_format_entry(s) for s in po],
+        }
+
+    return leaderboards, all_seasons
+
+
 @lru_cache(maxsize=1)
 def forecast() -> dict:
     careers = _careers()
@@ -242,18 +278,7 @@ def forecast() -> dict:
     backtest = _backtest(params)
     fidelity = raptor_box.fidelity_backtest()
 
-    # headline leaderboard: the most recent season available, best by WAR
-    latest = sorted((s for c in careers.values() for s in c
-                     if s["season"] == last_season),
-                    key=lambda s: s["war"], reverse=True)[:25]
-    leaderboard = [{
-        "name": s["name"], "abbr": s.get("team"), "mp": round(s["min"]),
-        "off": round(s["raptor_off"], 1), "dfn": round(s["raptor_def"], 1),
-        "raptor": round(s["raptor_total"], 1), "war": round(s["war"], 1),
-        "history": _history(s["name"]),
-        "logo": _team_logo(s.get("team")),
-    } for s in latest]
-
+    leaderboards, all_seasons = _all_leaderboards()
     projections = _projections(last_season, params)
 
     return {
@@ -264,26 +289,24 @@ def forecast() -> dict:
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "data_through": season_label,
         "description": "Box-RAPTOR plus-minus ratings and wins above replacement for "
-                       "every NBA player since 1976-77 — a from-box-scores reconstruction "
-                       f"of 538's RAPTOR, computed on one scale through {season_label} and "
-                       "extended one season ahead by a next-season projection.",
+                       "every NBA player since 1976-77.",
         "methodology": "RAPTOR was FiveThirtyEight's player plus-minus: points per 100 "
                        "possessions a player adds above league average on offense and "
                        "defense, rolled into wins above replacement. 538 retired it and "
                        "never released the full algorithm, so every rating here is "
-                       "Box-RAPTOR — a ridge-regression reconstruction of RAPTOR's "
-                       "box-score component, trained on 538's own box-stats-to-RAPTOR data "
+                       "Box-RAPTOR — a ridge regression trained on 538's own box-component "
+                       "RAPTOR (the box half of the box + on/off decomposition, 2014-2019) "
                        "and applied to box scores from 1976-77 to today, recentred per "
-                       "season so the league average is zero. Box scores can't see "
-                       "RAPTOR's on/off half, so the estimate is deliberately conservative "
-                       "at the extremes (see the fidelity backtest). The projection "
+                       "season so the league average is zero. The projection "
                        "forecasts a player's next-season Box-RAPTOR from a recency- and "
                        "minutes-weighted blend regressed toward replacement level, fit on "
                        f"seasons through {TRAIN_THROUGH} and evaluated out-of-sample on "
                        f"{TEST_FROM} onward.",
         "season_label": season_label,
         "proj_label": _label(proj_season),
-        "leaderboard": leaderboard,
+        "last_season": last_season,
+        "all_seasons": all_seasons,
+        "leaderboards": leaderboards,
         "projections": projections,
         "backtest": backtest,
         "fidelity": fidelity,

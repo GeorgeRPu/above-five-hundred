@@ -133,43 +133,55 @@ So this page doesn't use 538's published ratings at all. Every number is
 
 **1. Box-RAPTOR, a from-box-scores reconstruction for every season.** RAPTOR's
 *box* component is just a function of box-score rate stats.
-`above500/raptor_box.py` learns that box→RAPTOR mapping with a pure-Python
-ridge regression trained on 538's own box-stats-to-RAPTOR file, then scores
-**every** season from box scores alone — 1976-77 through the current season —
-producing one self-computed rating per player per year on a single scale, with
-no dependence on 538's published numbers. Because rates live on different
-scales across eras, each season's features are expressed relative to that
-season's own distribution and the ratings recentred so the league average is
-zero. On **held-out 538 seasons it never trained on** the reconstruction
-reproduces real RAPTOR with a **0.60 R² and 0.78 correlation** (1.46 MAE vs
-2.27 for a league-average guess); box scores can't see RAPTOR's on/off half,
-so the estimate is accurate in the middle and conservative at the extremes.
+`above500/raptor_box.py` learns that mapping with a pure-Python ridge
+regression trained on 538's box-component RAPTOR — the box half of 538's
+published box + on/off decomposition (available for 2014-2019 in their
+[modern RAPTOR file](https://github.com/fivethirtyeight/data/tree/master/nba-raptor))
+— then scores **every** season from box scores alone, 1976-77 through the
+current season, producing one self-computed rating per player per year on a
+single scale with no dependence on 538's published numbers. The eleven
+features are per-36 scoring, offensive and defensive rebounds, assists, steals,
+blocks and turnovers, plus true-shooting, three-point and free-throw rates and
+minutes — rebounds and stocks kept split by side, since 538 fits offensive
+boards to offense and defensive boards and blocks to defense. Because rates
+live on different scales across eras, each season's features are expressed
+relative to that season's own distribution and the ratings recentred so the
+league average is zero. Against 538's box-component RAPTOR the reconstruction
+achieves a **0.66 R² and 0.82 correlation** (1.27 MAE vs 2.16 for a
+league-average guess); the fit is strong on offense (0.83 R²) and weaker on
+defense (0.49), which box scores can only see through steals, blocks and
+defensive boards.
 
 **2. A next-season projection.** A player's coming-season Box-RAPTOR is
 forecast from a recency- and minutes-weighted blend of their recent seasons,
 regressed toward replacement level by a shrinkage that eases as the sample
 grows (a Marcel/CARMELO-style recipe). Its parameters are fit on target
 seasons through 2009 and evaluated, untouched, on 2010 onward; every
-projection uses only earlier seasons. Walk-forward over **4,494 out-of-sample
-player-seasons since 2010** it lands a mean absolute error of **1.24**
-Box-RAPTOR points (0.75 correlation), versus 1.35 for carrying the prior
-season forward and 1.94 for a flat baseline.
+projection uses only earlier seasons. Walk-forward over **5,115 out-of-sample
+player-seasons since 2010** it lands a mean absolute error of **1.28**
+Box-RAPTOR points (0.73 correlation), versus 1.41 for carrying the prior
+season forward and 1.95 for a flat baseline.
 
 **Data**:
 - Box-RAPTOR training and the 1976-77→2018-19 history —
   [fivethirtyeight/nba-player-advanced-metrics](https://github.com/fivethirtyeight/nba-player-advanced-metrics)
-  (CC BY 4.0), 538's own box-stats-and-RAPTOR file (RAPTOR is the training
-  *target*, never displayed), trimmed and aggregated to one row per
+  (CC BY 4.0) for box-score rate stats, joined with the box-component RAPTOR
+  from [fivethirtyeight/data/nba-raptor](https://github.com/fivethirtyeight/data/tree/master/nba-raptor)
+  (the training target, available for 2014-2019), aggregated to one row per
   player-season by `scripts/prepare_player_box.py` into
   `above500/data/nba_player_box.csv.gz`.
-- Recent box scores (the committed floor, 2019-20 to the current season) —
+- Recent regular-season box scores (the committed floor, 2019-20 to the
+  current season) —
   [NocturneBear/NBA-Data-2010-2024](https://github.com/NocturneBear/NBA-Data-2010-2024)
   through 2023-24, then [Basketball-Reference](https://www.basketball-reference.com/)
   season totals for everything after, aggregated by
   `scripts/prepare_recent_box.py` into `above500/data/nba_recent_box.csv.gz`.
-  Both are free, so rendering makes no API calls; re-run the script and commit
-  to push the floor forward each season. (balldontlie's player-stats endpoint
-  is paywalled, so there is no render-time top-up.)
+- Playoff box scores (1976-77 to the current season) — NocturneBear's playoff
+  dump (2010-11 through 2023-24) plus Basketball-Reference playoff totals for
+  all other seasons, aggregated by `scripts/prepare_po_box.py` into
+  `above500/data/nba_po_box.csv.gz`.
+- Both floor files are free, so rendering makes no API calls; re-run the
+  scripts and commit to push coverage forward each season.
 
 ### 2026 World Cup Forecast (`above500/wc_spi.py`)
 
@@ -231,6 +243,7 @@ above500/                Python package: models + HTML renderers
   render.py              payload -> HTML (tables, matchups, sparklines)
   data/                  committed data archives (CC BY 4.0 / CC0)
 scripts/                 regenerate the data archives
+  prepare_po_box.py      build playoff box-score floor (NocturneBear + BRef)
 styles/above500.scss     538-inspired Quarto theme
 .github/workflows/deploy.yml   render + deploy, nightly cron
 ```
