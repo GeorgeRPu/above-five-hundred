@@ -19,14 +19,12 @@ website:
         href: forecasts/world-cup-2026.qmd
       - text: "NBA"
         menu:
-          - text: "Elo Ratings"
+          - text: "Team Elo Ratings"
             href: forecasts/nba-elo.qmd
           - text: "RAPTOR Player Ratings"
             href: forecasts/nba-raptor.qmd
-      - text: "Methodology"
+      - text: "About"
         href: about.qmd
-      - text: "GitHub"
-        href: https://github.com/GeorgeRPu/above-five-hundred
   page-footer:
     left: "Above .500 — a FiveThirtyEight-style home for original sports models."
     right: "[Source & data on GitHub](https://github.com/GeorgeRPu/above-five-hundred)"

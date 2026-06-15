@@ -1,39 +1,42 @@
 ---
-pagetitle: "Methodology | Above .500"
+pagetitle: "About | Above .500"
 ---
 
 ```{=html}
 <span class="kicker">About</span>
-<h1 class="headline">How these forecasts work</h1>
-<p class="dek">Every number on this site is produced by an open statistical
-model that runs when the site is built. No black boxes, no stale data.</p>
+<h1 class="headline">What is Above .500?</h1>
+<p class="dek">A one-person attempt to keep the spirit of data-driven sports
+forecasting alive after FiveThirtyEight shut down.</p>
 
-<div class="section-head"><h2>The pipeline</h2></div>
+<div class="section-head"><h2>The idea</h2></div>
 ```
 
-Each model lives in the `above500` Python package and exposes a `forecast()`
-function. The pages on this site are [Quarto](https://quarto.org) documents:
-when the site is rendered, each page imports its model, runs it, and writes
-the tables, win-probability bars and sparklines you see. A scheduled build
-re-renders the site daily, so forecasts refresh without anyone committing
-data files.
+I'm [George Pu](https://github.com/GeorgeRPu), and I grew up refreshing
+FiveThirtyEight's forecast pages every morning during the NBA season. When 538
+went away in 2023, I lost my favorite source of transparent, model-driven
+sports predictions — so I decided to build my own.
+
+Above .500 is that project. Every forecast on this site comes from a
+statistical model I wrote, using publicly available data and open methods. No
+proprietary feeds, no black boxes.
 
 ```{=html}
-<div class="section-head"><h2>Reading the numbers</h2></div>
+<div class="section-head"><h2>How it works</h2></div>
 ```
 
-**Ratings** are Elo-style power scores: the gap between two teams' ratings
-maps to a win probability for a game between them, with an adjustment for
-home advantage. **Playoff and title odds** come from Monte Carlo simulation —
-the model plays out the rest of the season thousands of times and counts how
-often each outcome occurs. Probabilities are estimates, not promises: a 75%
-favorite should lose one time in four.
+The models are Python code that run every time the site is built. A nightly
+GitHub Action re-renders everything, so the numbers you see are never more than
+a day old. There are no manually updated spreadsheets or stale JSON files — if
+the upstream data has changed, the next build picks it up.
+
+Each forecast page explains its own methodology. If you want to dig deeper,
+the full source is on [GitHub](https://github.com/GeorgeRPu/above-five-hundred).
 
 ```{=html}
-<div class="section-head"><h2>Publishing your own model</h2></div>
+<div class="section-head"><h2>Why "Above .500"?</h2></div>
 ```
 
-Add a module to the `above500` package that returns the standard forecast
-payload, register it in `above500.MODELS`, and create a page under
-`forecasts/` that renders it — the existing `nba-elo.qmd` is a complete
-working example. The payload schema is documented in the repository README.
+In sports, a .500 record means you're perfectly average — you win as often as
+you lose. "Above .500" is the goal for any team that wants to make the
+playoffs. It felt like the right name for a site trying to do better than a
+coin flip.

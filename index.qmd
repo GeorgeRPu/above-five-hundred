@@ -4,9 +4,7 @@ pagetitle: "Above .500 | Sports forecasts & models"
 
 ```{=html}
 <span class="kicker">Above .500</span>
-<h1 class="headline">Upcoming forecasts</h1>
-<p class="dek">Win probabilities for the matches and games coming up next, from
-our models. Every forecast re-runs when the site is built.</p>
+<h1 class="headline">Upcoming matches</h1>
 ```
 
 ```{python}

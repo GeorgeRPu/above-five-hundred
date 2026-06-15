@@ -1,5 +1,5 @@
 ---
-pagetitle: "NBA Elo Ratings | Above .500"
+pagetitle: "NBA Team Elo Ratings | Above .500"
 ---
 
 ```{python}
