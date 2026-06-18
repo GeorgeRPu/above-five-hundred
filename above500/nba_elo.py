@@ -314,8 +314,8 @@ def _run() -> dict:
     ratings: dict[str, float] = {}
     season_now = games[0]["season"]
     predictions = []          # (season, p_home, home_won, p_ref_home)
-    final_records: dict[str, list[int]] = {}      # team -> [w, l] in final season
-    final_history: dict[str, list[float]] = {}    # team -> rating after each game
+    season_records: dict[int, dict[str, list[int]]] = {}
+    season_history: dict[int, dict[str, list[int]]] = {}
     last_games: list[dict] = []
 
     for g in games:
@@ -342,13 +342,17 @@ def _run() -> dict:
         ratings[home] = r_home + shift
         ratings[away] = r_away - shift
 
+        rec = season_records.setdefault(g["season"], {})
+        rec.setdefault(home, [0, 0])
+        rec.setdefault(away, [0, 0])
+        rec[home if home_won else away][0] += 1
+        rec[away if home_won else home][1] += 1
+
+        hist = season_history.setdefault(g["season"], {})
+        hist.setdefault(home, []).append(round(ratings[home]))
+        hist.setdefault(away, []).append(round(ratings[away]))
+
         if g["season"] == final_season:
-            final_records.setdefault(home, [0, 0])
-            final_records.setdefault(away, [0, 0])
-            final_records[home if home_won else away][0] += 1
-            final_records[away if home_won else home][1] += 1
-            final_history.setdefault(home, []).append(round(ratings[home], 1))
-            final_history.setdefault(away, []).append(round(ratings[away], 1))
             last_games.append({
                 "date": g["date"],
                 "status": "final",
@@ -364,10 +368,11 @@ def _run() -> dict:
         "final_season": final_season,
         "data_through": games[-1]["date"],
         "predictions": predictions,
-        "final_records": final_records,
-        "final_history": final_history,
+        "season_records": season_records,
+        "season_history": season_history,
         "last_games": last_games[-6:],
         "n_games": len(games),
+        "all_seasons": sorted(season_records.keys(), reverse=True),
     }
 
 
@@ -449,22 +454,26 @@ def forecast() -> dict:
                         logo=f"/assets/logos/nba/{abbr.lower()}.png")
         return side
 
-    standings = []
-    for team, (abbr, color) in TEAM_META.items():
-        if team not in run["final_records"]:
-            continue
-        w, l = run["final_records"][team]
-        history = run["final_history"][team]
-        standings.append({
-            "abbr": abbr,
-            "name": team,
-            "color": color,
-            "logo": f"/assets/logos/nba/{abbr.lower()}.png",
-            "rating": round(run["ratings"][team], 1),
-            "rating_change_7d": round(history[-1] - history[0], 1),
-            "record": f"{w}-{l}",
-            "history": history,
-        })
+    leaderboards = {}
+    for season in run["all_seasons"]:
+        entries = []
+        for team, (abbr, color) in TEAM_META.items():
+            rec = run["season_records"].get(season, {}).get(team)
+            if not rec:
+                continue
+            wins, losses = rec
+            history = run["season_history"][season][team]
+            entries.append({
+                "abbr": abbr,
+                "name": team,
+                "color": color,
+                "logo": f"/assets/logos/nba/{abbr.lower()}.png",
+                "rating": history[-1],
+                "change": history[-1] - history[0],
+                "record": f"{wins}-{losses}",
+                "history": history,
+            })
+        leaderboards[season] = {"rs": entries}
 
     # upcoming games: pre-tip win probabilities from the current ratings.
     # Games in a later season get the same 25% reversion the model applies
@@ -510,9 +519,8 @@ def forecast() -> dict:
             {**g, "home": team_blob(g["home"]), "away": team_blob(g["away"])}
             for g in run["last_games"]
         ] + upcoming_games,
-        "standings": standings,
-        "standings_title": f"Current Elo ratings (through {through})",
-        "column_labels": {"rating": "Elo", "change": f"{season_label} Δ",
-                          "record": season_label, "trend": "Season"},
+        "all_seasons": run["all_seasons"],
+        "last_season": final_season,
+        "leaderboards": leaderboards,
         "backtest": _backtest(run["predictions"]),
     }

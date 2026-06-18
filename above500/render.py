@@ -292,14 +292,15 @@ def odds_table(rows: list[dict], columns: list[dict], title: str, note: str = ""
 
 def season_picker_table(leaderboards: dict, seasons: list[int],
                         default_season: int, columns: list[dict],
-                        title: str, note: str = "") -> str:
-    """Leaderboard table with a season dropdown and regular-season/playoff toggle.
+                        title: str, note: str = "", *,
+                        widget_id: str = "raptor",
+                        show_type_toggle: bool = True,
+                        default_sort_key: str = "war",
+                        note_prefix: str = "Box-RAPTOR estimate") -> str:
+    """Leaderboard table with a season dropdown and optional RS/playoff toggle.
 
-    The data for every season (both regular season and playoffs) is emitted once
-    as a JSON island and the visible table is built client-side on demand. This
-    keeps the page out of pandoc's HTML parser — pre-rendering all 100 tables as
-    markup made a single render take minutes — while preserving the exact look of
-    the server-side tables (`team_cell`, `sparkline`, the `.fte` table).
+    The data for every season is emitted once as a JSON island and the visible
+    table is built client-side on demand.
     """
 
     def _label(s):
@@ -313,20 +314,26 @@ def season_picker_table(leaderboards: dict, seasons: list[int],
             f'<option value="{s}" data-has-po="{has_po}"{selected}>'
             f'{escape(_label(s))}</option>')
 
+    wid = widget_id
     header = (
         f'<div class="section-head">'
         f'<h2>{escape(title)}</h2>'
-        f'<span class="note" id="raptor-note">{escape(note)}</span>'
+        f'<span class="note" id="{wid}-note">{escape(note)}</span>'
         f'</div>')
+
+    toggle_html = ""
+    if show_type_toggle:
+        toggle_html = (
+            f'<div class="type-toggle" id="{wid}-type-toggle">'
+            f'<button class="toggle-btn active" data-type="rs">Regular Season</button>'
+            f'<button class="toggle-btn" data-type="po">Playoffs</button>'
+            f'</div>')
 
     picker = (
         f'<div class="season-controls">'
-        f'<select class="season-select" id="raptor-season">'
+        f'<select class="season-select" id="{wid}-season">'
         f'{"".join(options)}</select>'
-        f'<div class="type-toggle" id="raptor-type-toggle">'
-        f'<button class="toggle-btn active" data-type="rs">Regular Season</button>'
-        f'<button class="toggle-btn" data-type="po">Playoffs</button>'
-        f'</div></div>')
+        f'{toggle_html}</div>')
 
     payload = {
         "accents": ACCENTS,
@@ -334,57 +341,60 @@ def season_picker_table(leaderboards: dict, seasons: list[int],
                      "hide_sm": bool(c.get("hide_sm"))} for c in columns],
         "data": {str(s): {t: leaderboards.get(s, {}).get(t, [])
                           for t in ("rs", "po")} for s in seasons},
+        "showTypeToggle": show_type_toggle,
+        "defaultSortKey": default_sort_key,
+        "notePrefix": note_prefix,
     }
-    # Escape "<" so the JSON can never contain a literal "</script>" sequence.
     data_json = json.dumps(payload, separators=(",", ":")).replace("<", "\\u003c")
-    data = (f'<script type="application/json" id="raptor-data">{data_json}</script>')
-    container = '<div id="raptor-table"></div>'
+    data = f'<script type="application/json" id="{wid}-data">{data_json}</script>'
+    container = f'<div id="{wid}-table"></div>'
 
-    return header + picker + data + container + _SEASON_PICKER_JS
+    return header + picker + data + container + _season_picker_js(wid)
 
 
-# Client-side renderer for season_picker_table. Mirrors team_cell / sparkline /
-# _odds_table_html so the JS-built tables are byte-for-byte the server's markup.
-_SEASON_PICKER_JS = """\
+def _season_picker_js(wid: str) -> str:
+    """Client-side renderer for season_picker_table, parameterised by widget id."""
+    return f"""\
 <script>
-(function(){
-var cfg=JSON.parse(document.getElementById("raptor-data").textContent),
+(function(){{
+var cfg=JSON.parse(document.getElementById("{wid}-data").textContent),
     cols=cfg.columns,accents=cfg.accents,
-    sel=document.getElementById("raptor-season"),
-    toggle=document.getElementById("raptor-type-toggle"),
-    note=document.getElementById("raptor-note"),
-    out=document.getElementById("raptor-table"),
-    btns=toggle.querySelectorAll(".toggle-btn"),cur="rs",sortKey="war",sortDir=-1;
-function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
-function accent(seed){var h=0,s=String(seed);
-    for(var i=0;i<s.length;i++){h=(Math.imul(h,31)+s.charCodeAt(i))>>>0;}
-    return accents[h%accents.length];}
-function teamCell(r){
+    sel=document.getElementById("{wid}-season"),
+    toggleEl=document.getElementById("{wid}-type-toggle"),
+    note=document.getElementById("{wid}-note"),
+    out=document.getElementById("{wid}-table"),
+    btns=toggleEl?toggleEl.querySelectorAll(".toggle-btn"):[],
+    cur="rs",sortKey=cfg.defaultSortKey||"war",sortDir=-1;
+function esc(s){{return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");}}
+function accent(seed){{var h=0,s=String(seed);
+    for(var i=0;i<s.length;i++){{h=(Math.imul(h,31)+s.charCodeAt(i))>>>0;}}
+    return accents[h%accents.length];}}
+function teamCell(r){{
     var abbr=r.abbr||(r.name||"?").slice(0,3).toUpperCase(),name=esc(r.name||abbr),mk;
-    if(r.logo){mk='<img class="team-logo" src="'+esc(r.logo)+'" alt="'+esc(abbr)+'">';}
-    else{mk='<span class="team-sym" style="color:'+accent(abbr)+'">'+esc(abbr)+'</span>';}
+    if(r.logo){{mk='<img class="team-logo" src="'+esc(r.logo)+'" alt="'+esc(abbr)+'">';}}
+    else{{mk='<span class="team-sym" style="color:'+accent(abbr)+'">'+esc(abbr)+'</span>';}}
     return '<div class="team-cell">'+mk+'<span><span class="team-name">'+name+
-        '</span></span></div>';}
-function spark(series,idx){
+        '</span></span></div>';}}
+function spark(series,idx){{
     if(!series||series.length<2)return"";
     var w=140,h=28,lo=Math.min.apply(null,series),hi=Math.max.apply(null,series),
         span=(hi-lo)||1,pad=3,chartW=w-30,pts=[];
-    for(var i=0;i<series.length;i++){
+    for(var i=0;i<series.length;i++){{
         var x=pad+(i/(series.length-1))*(chartW-2*pad),
             y=h-pad-((series[i]-lo)/span)*(h-2*pad);
-        pts.push(x.toFixed(1)+","+y.toFixed(1));}
+        pts.push(x.toFixed(1)+","+y.toFixed(1));}}
     if(idx==null||idx<0||idx>=series.length)idx=series.length-1;
     var dot=pts[idx].split(","),hiR=Math.round(hi),loR=Math.round(lo),
         lxL=chartW+4,labels;
-    if(hiR!==loR){labels='<text class="spark-label" x="'+lxL+'" y="'+(pad+7)+'">'+hiR+
-        '</text><text class="spark-label" x="'+lxL+'" y="'+(h-pad+1)+'">'+loR+'</text>';}
-    else{labels='<text class="spark-label" x="'+lxL+'" y="'+(h/2+3).toFixed(0)+'">'+
-        hiR+'</text>';}
+    if(hiR!==loR){{labels='<text class="spark-label" x="'+lxL+'" y="'+(pad+7)+'">'+hiR+
+        '</text><text class="spark-label" x="'+lxL+'" y="'+(h-pad+1)+'">'+loR+'</text>';}}
+    else{{labels='<text class="spark-label" x="'+lxL+'" y="'+(h/2+3).toFixed(0)+'">'+
+        hiR+'</text>';}}
     return '<svg class="spark" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+
         '"><polyline points="'+pts.join(" ")+'"></polyline><circle class="spark-dot" cx="'+
-        dot[0]+'" cy="'+dot[1]+'" r="2.5"></circle>'+labels+'</svg>';}
-function cell(r,c){var v=r[c.key],hide=c.hide_sm?" hide-sm":"";
+        dot[0]+'" cy="'+dot[1]+'" r="2.5"></circle>'+labels+'</svg>';}}
+function cell(r,c){{var v=r[c.key],hide=c.hide_sm?" hide-sm":"";
     if(c.kind==="team")return '<td class="l">'+teamCell(r)+'</td>';
     if(c.kind==="spark")return '<td class="'+(c.hide_sm?"hide-sm":"")+'">'+
         spark(v||[],r.history_idx)+'</td>';
@@ -392,9 +402,12 @@ function cell(r,c){var v=r[c.key],hide=c.hide_sm?" hide-sm":"";
         '</td>';
     if(c.kind==="dec")return '<td class="num'+hide+'">'+(v!=null?v.toFixed(1):"\\u2014")+
         '</td>';
-    return '<td class="num'+hide+'">'+esc(v!=null?v:"\\u2014")+'</td>';}
-function header(){
-    return cols.map(function(c){
+    if(c.kind==="signed"){{var txt=v!=null?(v>0?"+"+Math.round(v):String(Math.round(v))):"\\u2014",
+        clr=v>0?"var(--accent-green)":v<0?"var(--accent-red)":"inherit";
+        return '<td class="num'+hide+'" style="color:'+clr+'">'+txt+'</td>';}}
+    return '<td class="num'+hide+'">'+esc(v!=null?v:"\\u2014")+'</td>';}}
+function header(){{
+    return cols.map(function(c){{
         var sortable=c.kind!=="spark",classes=[];
         if(c.kind==="team")classes.push("l");
         if(c.hide_sm)classes.push("hide-sm");
@@ -403,43 +416,49 @@ function header(){
             arrow=active?(sortDir<0?" \\u25be":" \\u25b4"):"",
             attrs=(classes.length?' class="'+classes.join(" ")+'"':"")+
                 (sortable?' data-sort="'+c.key+'"':"");
-        return '<th'+attrs+'>'+esc(c.label)+arrow+'</th>';}).join("");}
-function sortRows(rows){
-    var col=cols.filter(function(c){return c.key===sortKey;})[0],arr=rows.slice();
-    arr.sort(function(a,b){
-        if(col&&col.kind==="team"){
+        return '<th'+attrs+'>'+esc(c.label)+arrow+'</th>';}}).join("");}}
+function sortRows(rows){{
+    var col=cols.filter(function(c){{return c.key===sortKey;}})[0],arr=rows.slice();
+    arr.sort(function(a,b){{
+        if(col&&col.kind==="team"){{
             var x=(a.name||"").toLowerCase(),y=(b.name||"").toLowerCase();
-            return (x<y?-1:x>y?1:0)*sortDir;}
+            return (x<y?-1:x>y?1:0)*sortDir;}}
         var u=a[sortKey],v=b[sortKey];
         u=u==null?-Infinity:u;v=v==null?-Infinity:v;
-        return (u-v)*sortDir;});
-    return arr;}
-function table(rows){
-    var body=rows.map(function(r){
-        return '<tr>'+cols.map(function(c){return cell(r,c);}).join("")+'</tr>';}).join("");
+        return (u-v)*sortDir;}});
+    return arr;}}
+function table(rows){{
+    var body=rows.map(function(r){{
+        return '<tr>'+cols.map(function(c){{return cell(r,c);}}).join("")+'</tr>';}}).join("");
     return '<'+'table class="fte"><thead><tr>'+header()+'</tr></thead><tbody>'+body+
-        '</tbody></'+'table>';}
-function render(){
-    var s=sel.value,po=sel.selectedOptions[0].dataset.hasPo==="true";
-    btns[1].style.display=po?"":"none";
-    if(!po&&cur==="po"){cur="rs";btns[0].classList.add("active");
-        btns[1].classList.remove("active");}
-    var rows=(cfg.data[s]&&cfg.data[s][cur])||[];
-    out.innerHTML=table(sortRows(rows));
-    var lbl=cur==="po"?"playoffs":"regular season";
-    note.textContent="Box-RAPTOR estimate \\u00b7 top "+rows.length+" by WAR \\u00b7 "+lbl;}
-out.addEventListener("click",function(ev){
+        '</tbody></'+'table>';}}
+function render(){{
+    var s=sel.value,rows;
+    if(cfg.showTypeToggle){{
+        var po=sel.selectedOptions[0].dataset.hasPo==="true";
+        btns[1].style.display=po?"":"none";
+        if(!po&&cur==="po"){{cur="rs";btns[0].classList.add("active");
+            btns[1].classList.remove("active");}}
+        rows=(cfg.data[s]&&cfg.data[s][cur])||[];
+        var lbl=cur==="po"?"playoffs":"regular season";
+        note.textContent=cfg.notePrefix+" \\u00b7 top "+rows.length+" by WAR \\u00b7 "+lbl;
+    }}else{{
+        rows=(cfg.data[s]&&cfg.data[s]["rs"])||[];
+        note.textContent=cfg.notePrefix+" \\u00b7 "+rows.length+" teams";
+    }}
+    out.innerHTML=table(sortRows(rows));}}
+out.addEventListener("click",function(ev){{
     var th=ev.target.closest&&ev.target.closest("th[data-sort]");
     if(!th)return;
     var k=th.dataset.sort;
-    if(sortKey===k){sortDir=-sortDir;}else{sortKey=k;sortDir=k==="name"?1:-1;}
-    render();});
+    if(sortKey===k){{sortDir=-sortDir;}}else{{sortKey=k;sortDir=k==="name"?1:-1;}}
+    render();}});
 sel.addEventListener("change",render);
-btns.forEach(function(b){b.addEventListener("click",function(){
-    cur=b.dataset.type;btns.forEach(function(x){x.classList.remove("active");});
-    b.classList.add("active");render();});});
+btns.forEach(function(b){{b.addEventListener("click",function(){{
+    cur=b.dataset.type;btns.forEach(function(x){{x.classList.remove("active");}});
+    b.classList.add("active");render();}});}});
 render();
-})();
+}})();
 </script>"""
 
 
