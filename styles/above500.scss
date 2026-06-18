@@ -495,6 +495,14 @@ details.model-performance {
   &.active + .toggle-btn { border-left-color: var(--ink); }
 }
 
+.fte th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+
+  &:hover { color: var(--ink); }
+}
+
 /* --------------------------------------------------------------------------
    Sparklines
    -------------------------------------------------------------------------- */

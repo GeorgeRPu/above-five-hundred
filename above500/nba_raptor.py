@@ -232,11 +232,16 @@ def _team_logo(abbr: str | None) -> str | None:
 
 
 def _format_entry(s: dict) -> dict:
+    career = _careers().get(_norm_name(s["name"]), [])
+    history = [round(c["raptor_total"], 1) for c in career]
+    # which point in the career sparkline is the season being shown
+    idx = next((i for i, c in enumerate(career) if c["season"] == s["season"]),
+               len(history) - 1)
     return {
         "name": s["name"], "abbr": s.get("team"), "mp": round(s["min"]),
         "off": round(s["raptor_off"], 1), "dfn": round(s["raptor_def"], 1),
         "raptor": round(s["raptor_total"], 1), "war": round(s["war"], 1),
-        "history": _history(s["name"]),
+        "history": history, "history_idx": idx,
         "logo": _team_logo(s.get("team")),
     }
 

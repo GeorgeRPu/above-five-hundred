@@ -496,8 +496,7 @@ def forecast() -> dict:
         "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "data_through": through,
         "description": f"Franchise Elo ratings computed from {run['n_games']:,} real NBA and "
-                       f"ABA games since 1946, current through {through}, walk-forward "
-                       f"backtested over every game since {BACKTEST_FROM}.",
+                       f"ABA games since 1946.",
         "methodology": "Ratings follow FiveThirtyEight's published NBA Elo method: new "
                        "franchises start at 1300, ratings revert 25% toward 1505 between "
                        "seasons, home court is worth 100 Elo points, and games update "

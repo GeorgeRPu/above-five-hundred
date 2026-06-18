@@ -46,7 +46,7 @@ K_BASE = 0.05            # base learning rate for the online attack/defence fit
 GOAL_CAP = 6             # cap goals when updating, to limit blowout influence
 GOAL_MODEL_FROM = "1990-01-01"   # window for the league-average goal baselines
 BACKTEST_FROM = "1994-01-01"     # 3-points-for-a-win era
-N_SIMULATIONS = 10_000
+N_SIMULATIONS = 100_000
 WC_START = "2026-06-01"
 
 # Group letters keyed by an anchor team (groups come from the fixture
@@ -537,7 +537,7 @@ def forecast() -> dict:
         "description": f"Soccer Power Index ratings for every national team from "
                        f"{run['n_played']:,} internationals since 1872, with advancement "
                        f"and title odds from {N_SIMULATIONS:,} simulations of the real "
-                       f"48-team bracket. Updated as the tournament is played.",
+                       f"48-team bracket.",
         "methodology": "Soccer Power Index gives each team an offensive rating (goals it "
                        "would score against an average team on a neutral field) and a "
                        "defensive rating (goals it would concede), fit from goals scored "
