@@ -424,6 +424,11 @@ function sortRows(rows){{
             var x=(a.name||"").toLowerCase(),y=(b.name||"").toLowerCase();
             return (x<y?-1:x>y?1:0)*sortDir;}}
         var u=a[sortKey],v=b[sortKey];
+        if(col&&col.kind==="text"){{
+            var x=String(u||""),y=String(v||""),
+                nx=parseFloat(x),ny=parseFloat(y);
+            if(!isNaN(nx)&&!isNaN(ny))return (nx-ny)*sortDir;
+            return (x<y?-1:x>y?1:0)*sortDir;}}
         u=u==null?-Infinity:u;v=v==null?-Infinity:v;
         return (u-v)*sortDir;}});
     return arr;}}
