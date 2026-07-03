@@ -256,6 +256,10 @@ h1.headline {
    Forecast tables
    -------------------------------------------------------------------------- */
 
+/* wide tables scroll inside their own container instead of stretching
+   the page column on small screens */
+.fte-wrap { overflow-x: auto; }
+
 table.fte {
   width: 100%;
   border-collapse: collapse;
@@ -276,6 +280,14 @@ table.fte {
   }
 
   thead th.l { text-align: left; }
+
+  /* odds columns stay narrow: headers wrap into stacked lines, 538-style */
+  thead th.prob-h {
+    white-space: normal;
+    max-width: 5.5em;
+    line-height: 1.5;
+    vertical-align: bottom;
+  }
 
   tbody td {
     padding: 9px 10px;

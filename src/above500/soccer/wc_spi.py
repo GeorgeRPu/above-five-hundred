@@ -42,6 +42,8 @@ from .. import DATA_DIR
 DATA = DATA_DIR / "soccer" / "intl_results.csv.gz"
 LIVE_URL = "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
 LIVE_CACHE = Path(os.environ.get("TMPDIR", "/tmp")) / "above500_intl_results.csv"
+SHOOTOUT_URL = "https://raw.githubusercontent.com/martj42/international_results/master/shootouts.csv"
+SHOOTOUT_CACHE = Path(os.environ.get("TMPDIR", "/tmp")) / "above500_shootouts.csv"
 LIVE_CACHE_MAX_AGE = 6 * 3600  # the source updates daily during the World Cup
 
 K_BASE = 0.05            # base learning rate for the online attack/defence fit
@@ -67,6 +69,46 @@ GROUP_ANCHORS = {
 # Group winners who face third-placed teams in the round of 32 (the other
 # four winners face runners-up)
 WINNERS_VS_THIRDS = set("ABDEGIKL")
+
+# The official knockout bracket, each match identified by (date, host city)
+# as they appear in the martj42 rows. Slots are in bracket order: winners of
+# slots 2i and 2i+1 of one round meet in slot i of the next. Once every
+# round-of-32 tie is known from the data, the simulation walks this real
+# bracket instead of re-deriving one from simulated group standings.
+KO_BRACKET = {
+    "Round of 32": [
+        ("2026-06-29", "Foxborough"), ("2026-06-30", "East Rutherford"),
+        ("2026-06-28", "Inglewood"), ("2026-06-29", "Guadalupe"),
+        ("2026-07-02", "Toronto"), ("2026-07-02", "Inglewood"),
+        ("2026-07-01", "Santa Clara"), ("2026-07-01", "Seattle"),
+        ("2026-06-29", "Houston"), ("2026-06-30", "Arlington"),
+        ("2026-06-30", "Mexico City"), ("2026-07-01", "Atlanta"),
+        ("2026-07-03", "Miami Gardens"), ("2026-07-03", "Arlington"),
+        ("2026-07-02", "Vancouver"), ("2026-07-03", "Kansas City"),
+    ],
+    "Round of 16": [
+        ("2026-07-04", "Philadelphia"), ("2026-07-04", "Houston"),
+        ("2026-07-06", "Arlington"), ("2026-07-06", "Seattle"),
+        ("2026-07-05", "East Rutherford"), ("2026-07-05", "Mexico City"),
+        ("2026-07-07", "Atlanta"), ("2026-07-07", "Vancouver"),
+    ],
+    "Quarterfinal": [
+        ("2026-07-09", "Foxborough"), ("2026-07-10", "Inglewood"),
+        ("2026-07-11", "Miami Gardens"), ("2026-07-11", "Kansas City"),
+    ],
+    "Semifinal": [("2026-07-14", "Arlington"), ("2026-07-15", "Atlanta")],
+    "Third place": [("2026-07-18", "Miami Gardens")],
+    "Final": [("2026-07-19", "East Rutherford")],
+}
+
+# martj42 sometimes lists a fixture under its metro area before settling on
+# the stadium's city once played (e.g. Portugal v Spain in "Dallas")
+KO_CITY_ALIASES = {
+    "Dallas": "Arlington", "Los Angeles": "Inglewood",
+    "New York": "East Rutherford", "New Jersey": "East Rutherford",
+    "Boston": "Foxborough", "Monterrey": "Guadalupe",
+    "San Francisco": "Santa Clara", "Miami": "Miami Gardens",
+}
 
 FIFA_CODES = {
     "Mexico": "MEX", "Czech Republic": "CZE", "South Korea": "KOR",
@@ -171,6 +213,7 @@ def _parse(text_lines) -> tuple[list[dict], list[dict]]:
             "home": r["home_team"],
             "away": r["away_team"],
             "tournament": r["tournament"],
+            "city": r.get("city", ""),   # committed archive drops the column
             "neutral": r["neutral"] == "TRUE",
         }
         if r["home_score"] not in ("NA", ""):
@@ -210,6 +253,38 @@ def _group_fixtures() -> list[dict]:
     """
     with gzip.open(DATA, "rt", newline="") as f:
         return _parse(f)[1]
+
+
+def _shootouts() -> dict[tuple[str, str, str], str]:
+    """Penalty-shootout winners keyed by (date, home, away).
+
+    martj42 records a knockout match's 90/120-minute score in results.csv
+    and the shootout winner separately in shootouts.csv. A drawn knockout
+    match with no shootout row yet is resolved by win share in the sim.
+    """
+    try:
+        if not (SHOOTOUT_CACHE.exists()
+                and time.time() - SHOOTOUT_CACHE.stat().st_mtime < LIVE_CACHE_MAX_AGE):
+            with urllib.request.urlopen(SHOOTOUT_URL, timeout=60) as resp:
+                SHOOTOUT_CACHE.write_bytes(resp.read())
+    except Exception:
+        pass
+    try:
+        with open(SHOOTOUT_CACHE, newline="") as f:
+            return {(r["date"], r["home_team"], r["away_team"]): r["winner"]
+                    for r in csv.DictReader(f)}
+    except Exception:
+        return {}
+
+
+def _ko_rows(run: dict) -> dict[str, list[dict | None]]:
+    """Real rows (played or scheduled) for each official knockout slot."""
+    by_anchor = {}
+    for m in run["wc_results"] + run["fixtures"]:
+        city = m.get("city", "")
+        by_anchor[(m["date"], KO_CITY_ALIASES.get(city, city))] = m
+    return {label: [by_anchor.get(a) for a in slots]
+            for label, slots in KO_BRACKET.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -371,6 +446,7 @@ def _run() -> dict:
         "data_through": played[-1]["date"],
         "wc_results": [m for m in played
                        if m["tournament"] == "FIFA World Cup" and m["date"] >= WC_START],
+        "shootouts": _shootouts(),
         "wc_backtest_data": wc_backtest_data,
     }
 
@@ -519,7 +595,52 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
     fixed = {(m["home"], m["away"]): (m["home_goals"], m["away_goals"])
              for m in run["wc_results"]}
 
-    tally = {t: {"r32": 0, "qf": 0, "sf": 0, "final": 0, "title": 0} for t in teams}
+    tally = {t: {"r32": 0, "r16": 0, "qf": 0, "sf": 0, "final": 0, "title": 0}
+             for t in teams}
+
+    # Once every round-of-32 tie is known from the data, condition on the
+    # real bracket: played knockout matches (and shootout winners) are
+    # fixed and only the ties still to be played are simulated.
+    ko = _ko_rows(run)
+    shootouts = run["shootouts"]
+    if all(row is not None for row in ko["Round of 32"]):
+
+        def resolve(row, t1, t2, rng):
+            """Winner of a knockout tie: result, shootout record, or sample."""
+            if row is not None and "home_goals" in row:
+                if row["home_goals"] != row["away_goals"]:
+                    return (row["home"] if row["home_goals"] > row["away_goals"]
+                            else row["away"])
+                won = shootouts.get((row["date"], row["home"], row["away"]))
+                if won in (row["home"], row["away"]):
+                    return won
+                t1, t2 = row["home"], row["away"]  # drawn, shootout not recorded
+            return advance(t1, t2, rng)
+
+        for row in ko["Round of 32"]:
+            tally[row["home"]]["r32"] = n_sims
+            tally[row["away"]]["r32"] = n_sims
+        stages = [("Round of 16", "qf"), ("Quarterfinal", "sf"),
+                  ("Semifinal", "final"), ("Final", "title")]
+        for _ in range(n_sims):
+            alive = [resolve(row, row["home"], row["away"], rng)
+                     for row in ko["Round of 32"]]
+            for t in alive:
+                tally[t]["r16"] += 1
+            for label, stage in stages:
+                winners = []
+                for i, row in enumerate(ko[label]):
+                    t1, t2 = ((row["home"], row["away"]) if row is not None
+                              else (alive[2 * i], alive[2 * i + 1]))
+                    winners.append(resolve(row, t1, t2, rng))
+                alive = winners
+                for t in alive:
+                    tally[t][stage] += 1
+        return {
+            "groups": groups,
+            "odds": {t: {k: v / n_sims for k, v in d.items()}
+                     for t, d in tally.items()},
+        }
 
     for _ in range(n_sims):
         pts = {t: 0 for t in teams}
@@ -582,6 +703,8 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
             matches.append((t1, ru_pool.pop(pick)))
 
         alive = [advance(t1, t2, rng) for t1, t2 in matches]
+        for t in alive:
+            tally[t]["r16"] += 1
         for stage in ["qf", "sf", "final", "title"]:
             alive = [advance(alive[i], alive[i + 1], rng)
                      for i in range(0, len(alive), 2)]
@@ -624,24 +747,41 @@ def forecast() -> dict:
             "group": f"Group {group}",
             "history": run["history"].get(team, []),
             "r32_prob": odds["r32"],
+            "r16_prob": odds["r16"],
             "qf_prob": odds["qf"],
             "sf_prob": odds["sf"],
+            "final_prob": odds["final"],
             "title_prob": odds["title"],
         })
 
     upcoming = []
     played_keys = {(m["home"], m["away"]) for m in run["wc_results"]}
+    group_keys = {(m["home"], m["away"]) for m in run["group_fixtures"]}
+    ko_round = {anchor: label for label, slots in KO_BRACKET.items()
+                for anchor in slots}
+
     for m in run["fixtures"]:
-        if (m["home"], m["away"]) in played_keys or len(upcoming) >= 9:
+        key = (m["home"], m["away"])
+        if key in played_keys or len(upcoming) >= 9:
             continue
         bh = NEUTRAL if m["neutral"] else run["HOME"]
         ba = NEUTRAL if m["neutral"] else run["AWAY"]
         lam_h = math.exp(bh + off[m["home"]] - dfn[m["away"]])
         lam_a = math.exp(ba + off[m["away"]] - dfn[m["home"]])
         ph, pd, pa = outcome_probs(lam_h, lam_a)
+        knockout = key not in group_keys
+        if knockout:
+            # no draws in knockouts: fold the draw mass into each side by
+            # win share, the same resolution the simulation's advance() uses
+            ph, pa = ph + pd * ph / (ph + pa), pa + pd * pa / (ph + pa)
+            pd = None
+        city = m.get("city", "")
+        anchor = (m["date"], KO_CITY_ALIASES.get(city, city))
         upcoming.append({
             "date": m["date"],
-            "group": f"Group {group_of[m['home']]}",
+            "group": (ko_round.get(anchor, "Knockout") if knockout
+                      else f"Group {group_of[m['home']]}"),
+            "stage_label": "Round" if knockout else "Group",
             "home": m["home"], "away": m["away"],
             "home_abbr": FIFA_CODES.get(m["home"], m["home"][:3].upper()),
             "away_abbr": FIFA_CODES.get(m["away"], m["away"][:3].upper()),
@@ -671,10 +811,17 @@ def forecast() -> dict:
                        "defensive numbers are goals scored and conceded against that same "
                        "reference. Win/draw/loss probabilities and simulated scorelines "
                        "come from a Poisson model on those ratings plus home advantage. "
+                       "Knockout matches cannot end in a draw, so the draw probability "
+                       "is split between the sides in proportion to their win chances "
+                       "— each side's number is its chance to advance. "
                        "The simulation plays the remaining real fixtures, ranks groups on "
                        "points and goal difference, advances the twelve winners, twelve "
                        "runners-up and eight best thirds, and uses the official bracket "
                        "with third-place slots randomized within FIFA's allocation rules. "
+                       "Once the round of 32 is set, the simulation pins itself to the "
+                       "real bracket instead: knockout results already played — including "
+                       "penalty-shootout winners — are fixed, and only the remaining ties "
+                       "are simulated. "
                        + ("Following FiveThirtyEight, the ratings then blend 25% toward a "
                           "club-match roster prior — 538's own method. We rate club teams "
                           "with the same engine (from domestic leagues plus continental cups "

@@ -118,9 +118,10 @@ def sparkline(series, width: int = 140, height: int = 28) -> str:
     )
 
 
-def _prob_td(p) -> str:
+def _prob_td(p, hide_sm: bool = False) -> str:
     color = ";color:#fff" if (p is not None and p > 0.75) else ""
-    return f'<td class="prob" style="background:{prob_shade(p)}{color}">{fmt_pct(p)}</td>'
+    cls = "prob hide-sm" if hide_sm else "prob"
+    return f'<td class="{cls}" style="background:{prob_shade(p)}{color}">{fmt_pct(p)}</td>'
 
 
 def _team_row(team: dict, opponent: dict, status: str) -> str:
@@ -229,11 +230,11 @@ def standings_table(forecast: dict) -> str:
     return (
         section_head(forecast.get("standings_title", "Ratings & odds"),
                      f"{len(rows)} teams")
-        + '<table class="fte"><thead><tr>'
+        + '<div class="fte-wrap"><table class="fte"><thead><tr>'
         + "".join(head)
         + "</tr></thead><tbody>"
         + "".join(body)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
     )
 
 
@@ -245,8 +246,14 @@ def _odds_table_html(rows: list[dict], columns: list[dict],
 
     head = []
     for c in columns:
-        cls = ' class="l"' if c["kind"] == "team" else (
-            ' class="hide-sm"' if c.get("hide_sm") else "")
+        classes = []
+        if c["kind"] == "team":
+            classes.append("l")
+        elif c["kind"] == "prob":
+            classes.append("prob-h")   # narrow column, header wraps
+        if c["kind"] != "team" and c.get("hide_sm"):
+            classes.append("hide-sm")
+        cls = f' class="{" ".join(classes)}"' if classes else ""
         head.append(f'<th{cls}>{escape(c["label"])}</th>')
 
     body = []
@@ -257,7 +264,7 @@ def _odds_table_html(rows: list[dict], columns: list[dict],
             if c["kind"] == "team":
                 cells.append(f'<td class="l">{team_cell(r, sub=r.get("sub"))}</td>')
             elif c["kind"] == "prob":
-                cells.append(_prob_td(v))
+                cells.append(_prob_td(v, hide_sm=c.get("hide_sm", False)))
             elif c["kind"] == "spark":
                 hide = " hide-sm" if c.get("hide_sm") else ""
                 cells.append(f'<td class="{hide}">{sparkline(v or [])}</td>')
@@ -276,11 +283,11 @@ def _odds_table_html(rows: list[dict], columns: list[dict],
         body.append("<tr>" + "".join(cells) + "</tr>")
 
     return (
-        '<table class="fte"><thead><tr>'
+        '<div class="fte-wrap"><table class="fte"><thead><tr>'
         + "".join(head)
         + "</tr></thead><tbody>"
         + "".join(body)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
     )
 
 
@@ -347,7 +354,7 @@ def season_picker_table(leaderboards: dict, seasons: list[int],
     }
     data_json = json.dumps(payload, separators=(",", ":")).replace("<", "\\u003c")
     data = f'<script type="application/json" id="{wid}-data">{data_json}</script>'
-    container = f'<div id="{wid}-table"></div>'
+    container = f'<div id="{wid}-table" class="fte-wrap"></div>'
 
     return header + picker + data + container + _season_picker_js(wid)
 
@@ -473,10 +480,19 @@ def _flag_img(src: str | None, abbr: str) -> str:
     return ""
 
 
-def fixtures_table(fixtures: list[dict], title: str, note: str = "") -> str:
-    """Upcoming matches with win/draw/win probabilities."""
+def fixtures_table(fixtures: list[dict], title: str,
+                   note: str | None = None) -> str:
+    """Upcoming matches with win/draw/win probabilities.
+
+    Fixtures with ``p_draw`` set to None (knockout matches, where a draw is
+    impossible) omit the draw column when no listed fixture can end level.
+    """
     if not fixtures:
         return ""
+    has_draw = any(m.get("p_draw") is not None for m in fixtures)
+    if note is None:
+        note = ("Win/draw/win probabilities" if has_draw
+                else "Chance to advance — knockout matches cannot end in a draw")
     body = []
     for m in fixtures:
         h_flag = _flag_img(m.get("home_logo"), m.get("home_abbr", ""))
@@ -489,19 +505,22 @@ def fixtures_table(fixtures: list[dict], title: str, note: str = "") -> str:
             f' <span class="team-sub">v</span> '
             f'{a_flag}<span class="team-name">{escape(m["away"])}</span></td>'
             f'{_prob_td(m["p_home"])}'
-            f'{_prob_td(m["p_draw"])}'
-            f'{_prob_td(m["p_away"])}'
+            + (_prob_td(m.get("p_draw")) if has_draw else "")
+            + f'{_prob_td(m["p_away"])}'
             "</tr>"
         )
     home_label = escape(fixtures[0].get("home_label", "Home win"))
+    stage_label = escape(fixtures[0].get("stage_label", "Group"))
     return (
         section_head(title, note)
-        + '<table class="fte"><thead><tr>'
-        + '<th class="l">Date</th><th class="hide-sm">Group</th>'
-        + f'<th class="l">Match</th><th>{home_label}</th><th>Draw</th><th>Away win</th>'
+        + '<div class="fte-wrap"><table class="fte"><thead><tr>'
+        + f'<th class="l">Date</th><th class="hide-sm">{stage_label}</th>'
+        + f'<th class="l">Match</th><th>{home_label}</th>'
+        + ('<th>Draw</th>' if has_draw else '')
+        + '<th>Away win</th>'
         + "</tr></thead><tbody>"
         + "".join(body)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
     )
 
 
@@ -524,12 +543,12 @@ def backtest_models_table(backtest: dict) -> str:
     return (
         section_head(f"Backtest since {backtest['since']}",
                      f"{backtest['n']:,} games, walk-forward")
-        + '<table class="fte"><thead><tr>'
+        + '<div class="fte-wrap"><table class="fte"><thead><tr>'
         + '<th class="l">Model</th><th>Games</th><th>Accuracy</th>'
         + '<th>Brier score</th><th>Log loss</th>'
         + "</tr></thead><tbody>"
         + "".join(rows)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
         + '<p class="table-note">Accuracy is the share of games where the favorite won. '
         + "Brier score and log loss measure probability quality; lower is better. A coin "
         + "flip has a Brier score of 0.2500. The reference Elo is scored only on games "
@@ -569,12 +588,12 @@ def wc_backtest_table(wc_backtest: dict) -> str:
 
     return (
         section_head("World Cup roster-blend backtest", note)
-        + '<table class="fte"><thead><tr>'
+        + '<div class="fte-wrap"><table class="fte"><thead><tr>'
         + '<th class="l">Model</th><th>Games</th><th>Accuracy</th>'
         + '<th>Brier score</th><th>Log loss</th>'
         + "</tr></thead><tbody>"
         + "".join(rows)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
         + '<p class="table-note">Ratings update walk-forward through each '
         + "tournament (as the nightly production re-fit does); the roster prior "
         + "is fixed at opening day and shifts ratings 25% toward it. The model "
@@ -605,12 +624,12 @@ def calibration_table(backtest: dict) -> str:
         )
     return (
         section_head("Calibration", "Forecast vs. reality")
-        + '<table class="fte"><thead><tr>'
+        + '<div class="fte-wrap"><table class="fte"><thead><tr>'
         + '<th class="l">Home win forecast</th><th>Games</th>'
         + '<th>Avg. forecast</th><th>Actual win rate</th><th>Gap</th>'
         + "</tr></thead><tbody>"
         + "".join(rows)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
         + '<p class="table-note">A well-calibrated model\'s forecasts match observed '
         + "frequencies: games it calls 70-30 should be won by the favorite about 70% of "
         + "the time.</p>"
@@ -632,11 +651,11 @@ def decades_table(backtest: dict) -> str:
         )
     return (
         section_head("Era by era", "Predictability over time")
-        + '<table class="fte"><thead><tr>'
+        + '<div class="fte-wrap"><table class="fte"><thead><tr>'
         + '<th class="l">Decade</th><th>Games</th><th>Accuracy</th><th>Brier score</th>'
         + "</tr></thead><tbody>"
         + "".join(rows)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
     )
 
 
@@ -663,12 +682,12 @@ def regression_backtest_table(backtest: dict) -> str:
     return (
         section_head(f"Backtest since {backtest['since']}",
                      f"{backtest['n']:,} player-seasons, out-of-sample")
-        + '<table class="fte"><thead><tr>'
+        + '<div class="fte-wrap"><table class="fte"><thead><tr>'
         + '<th class="l">Projection</th><th>Seasons</th><th>MAE</th>'
         + '<th>RMSE</th><th>Correlation</th>'
         + "</tr></thead><tbody>"
         + "".join(rows)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
         + '<p class="table-note">Each projection is scored against the player\'s actual '
         + "next-season Box-RAPTOR. Mean absolute error and RMSE measure how far off the "
         + "forecasts are (lower is better); correlation rewards ranking players correctly "
@@ -685,7 +704,7 @@ def fidelity_table(fidelity: dict) -> str:
     return (
         section_head("Box-RAPTOR fidelity",
                      f"held-out 538 seasons since {fidelity['since']}")
-        + '<table class="fte"><thead><tr>'
+        + '<div class="fte-wrap"><table class="fte"><thead><tr>'
         + '<th class="l">Estimator</th><th>Seasons</th><th>MAE</th>'
         + '<th>R²</th><th>Correlation</th>'
         + "</tr></thead><tbody>"
@@ -702,7 +721,7 @@ def fidelity_table(fidelity: dict) -> str:
         + f'<td class="num">{fidelity["baseline_mae"]:.3f}</td>'
         + '<td class="num">0.000</td><td class="num">—</td>'
         + "</tr>"
-        + "</tbody></table>"
+        + "</tbody></table></div>"
         + '<p class="table-note">Box scores reproduce a player\'s RAPTOR to within '
         + f'{fidelity["mae"]:.2f} points on seasons the estimator never trained on. The '
         + "rest is RAPTOR's on/off component, which play-by-play sees and box scores "
@@ -727,12 +746,12 @@ def projection_tiers_table(backtest: dict) -> str:
         )
     return (
         section_head("Calibration", "Projection vs. reality")
-        + '<table class="fte"><thead><tr>'
+        + '<div class="fte-wrap"><table class="fte"><thead><tr>'
         + '<th class="l">Projected tier</th><th>Seasons</th>'
         + '<th>Avg. projection</th><th>Actual RAPTOR</th><th>Gap</th>'
         + "</tr></thead><tbody>"
         + "".join(rows)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
         + '<p class="table-note">A well-calibrated projection lands near the truth in '
         + "each tier: the players it pegs as stars should average star production, and "
         + "those it writes off should average replacement level.</p>"
@@ -754,11 +773,11 @@ def regression_eras_table(backtest: dict) -> str:
         )
     return (
         section_head("Era by era", "Projectability over time")
-        + '<table class="fte"><thead><tr>'
+        + '<div class="fte-wrap"><table class="fte"><thead><tr>'
         + '<th class="l">Decade</th><th>Seasons</th><th>MAE</th><th>Correlation</th>'
         + "</tr></thead><tbody>"
         + "".join(rows)
-        + "</tbody></table>"
+        + "</tbody></table></div>"
     )
 
 

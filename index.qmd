@@ -18,8 +18,10 @@ for m in MODELS:
     # game-based models (e.g. NBA Elo) expose `games` carrying a status.
     # Each renderer returns "" when there is nothing upcoming, so models
     # with no scheduled events simply drop out.
-    print(render.fixtures_table(f.get("upcoming", []), m["name"],
-                                "Win/draw/win probabilities"))
-    print(render.games_section(f, "upcoming", m["name"],
-                               "Win probability from our ratings"))
+    html = render.fixtures_table(f.get("upcoming", []), m["name"])
+    html += render.games_section(f, "upcoming", m["name"],
+                                 "Win probability from our ratings")
+    # payload asset paths are relative to forecasts/; this page is at the
+    # site root, one level up
+    print(html.replace('src="../assets/', 'src="assets/'))
 ```
