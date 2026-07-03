@@ -453,7 +453,7 @@ def forecast() -> dict:
         abbr, color = TEAM_META.get(side["name"], (None, None))
         if abbr:
             side.update(abbr=abbr, color=color,
-                        logo=f"/assets/logos/nba/{abbr.lower()}.png")
+                        logo=f"../assets/logos/nba/{abbr.lower()}.png")
         return side
 
     leaderboards = {}
@@ -469,7 +469,7 @@ def forecast() -> dict:
                 "abbr": abbr,
                 "name": team,
                 "color": color,
-                "logo": f"/assets/logos/nba/{abbr.lower()}.png",
+                "logo": f"../assets/logos/nba/{abbr.lower()}.png",
                 "rating": history[-1],
                 "change": history[-1] - history[0],
                 "record": f"{wins}-{losses}",

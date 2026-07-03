@@ -608,7 +608,7 @@ def forecast() -> dict:
 
     def _flag(name):
         iso2 = FLAG_ISO2.get(name)
-        return f"/assets/logos/flags/{iso2}.svg" if iso2 else None
+        return f"../assets/logos/flags/{iso2}.svg" if iso2 else None
 
     standings = []
     for team, group in group_of.items():

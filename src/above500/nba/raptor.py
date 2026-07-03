@@ -228,7 +228,7 @@ def _team_logo(abbr: str | None) -> str | None:
     """Path to a player's team logo, or None when the team is unknown."""
     from .elo import TEAM_META
     valid = {a for a, _ in TEAM_META.values()}
-    return f"/assets/logos/nba/{abbr.lower()}.png" if abbr in valid else None
+    return f"../assets/logos/nba/{abbr.lower()}.png" if abbr in valid else None
 
 
 def _format_entry(s: dict) -> dict:
