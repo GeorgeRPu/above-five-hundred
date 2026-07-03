@@ -345,10 +345,11 @@ def _run() -> dict:
         ratings[away] = r_away - shift
 
         rec = season_records.setdefault(g["season"], {})
-        rec.setdefault(home, [0, 0])
-        rec.setdefault(away, [0, 0])
-        rec[home if home_won else away][0] += 1
-        rec[away if home_won else home][1] += 1
+        rec.setdefault(home, {"rs": [0, 0], "po": [0, 0]})
+        rec.setdefault(away, {"rs": [0, 0], "po": [0, 0]})
+        bucket = "po" if g["playoffs"] else "rs"
+        rec[home if home_won else away][bucket][0] += 1
+        rec[away if home_won else home][bucket][1] += 1
 
         hist = season_history.setdefault(g["season"], {})
         hist.setdefault(home, []).append(round(ratings[home]))
@@ -463,7 +464,8 @@ def forecast() -> dict:
             rec = run["season_records"].get(season, {}).get(team)
             if not rec:
                 continue
-            wins, losses = rec
+            rs_w, rs_l = rec["rs"]
+            po_w, po_l = rec["po"]
             history = run["season_history"][season][team]
             entries.append({
                 "abbr": abbr,
@@ -472,7 +474,9 @@ def forecast() -> dict:
                 "logo": f"../assets/logos/nba/{abbr.lower()}.png",
                 "rating": history[-1],
                 "change": history[-1] - history[0],
-                "record": f"{wins}-{losses}",
+                "record": f"{rs_w + po_w}-{rs_l + po_l}",
+                "rs_record": f"{rs_w}-{rs_l}",
+                "po_record": f"{po_w}-{po_l}" if po_w + po_l > 0 else "—",
                 "history": history,
             })
         leaderboards[season] = {"rs": entries}
