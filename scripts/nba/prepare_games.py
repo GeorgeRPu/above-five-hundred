@@ -12,26 +12,23 @@ Two sources, same lineage:
    https://github.com/Neil-Paine-1/NBA-elo
 
 Output is one row per game (home perspective) committed at
-above500/data/nba_games.csv.gz so builds never depend on either upstream
+data/nba/games.csv.gz so builds never depend on either upstream
 file staying available. The model can additionally fetch newer games from
 source 2 at render time; this script just refreshes the committed archive.
 
 Usage:
     curl -sLO https://raw.githubusercontent.com/fivethirtyeight/data/master/nba-elo/nbaallelo.csv
     curl -sL -o nba_elo_paine.csv https://raw.githubusercontent.com/Neil-Paine-1/NBA-elo/main/nba_elo.csv
-    python3 scripts/prepare_nba_data.py nbaallelo.csv nba_elo_paine.csv
+    uv run python scripts/nba/prepare_games.py nbaallelo.csv nba_elo_paine.csv
 """
 
 import csv
 import gzip
 import sys
 from datetime import datetime
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from above500.nba_elo import ABBR_TO_FRANCHISE  # noqa: E402
+from above500.nba.elo import DATA as OUT, ABBR_TO_FRANCHISE
 
-OUT = Path(__file__).resolve().parent.parent / "above500" / "data" / "nba_games.csv.gz"
 
 FIELDS = ["season", "date", "playoffs", "league",
           "home", "away", "home_pts", "away_pts", "neutral", "p_ref_home"]

@@ -18,10 +18,10 @@ both broad and *cross-league calibrated*:
     being an isolated zero-sum system.
 
 Everything lands in one schema (date, league, home, away, goals) in
-above500/data/club_results.csv.gz, which feeds above500/club_spi.py.
+data/soccer/club_results.csv.gz, which feeds src/above500/soccer/club_spi.py.
 Club names are reconciled across sources at fit time by above500.club_names.
 
-    python3 scripts/prepare_club_results.py
+    uv run python scripts/soccer/prepare_club_results.py
 """
 
 from __future__ import annotations
@@ -32,9 +32,8 @@ import io
 import json
 import re
 import urllib.request
-from pathlib import Path
 
-OUT = Path(__file__).resolve().parent.parent / "above500" / "data" / "club_results.csv.gz"
+from above500.soccer.club_spi import DATA as OUT
 FIELDS = ["date", "league", "home", "away", "home_goals", "away_goals"]
 
 OF_API = "https://api.github.com/repos/openfootball/football.json/contents"

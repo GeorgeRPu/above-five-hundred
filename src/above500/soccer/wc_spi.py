@@ -37,7 +37,9 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
-DATA = Path(__file__).resolve().parent / "data" / "intl_results.csv.gz"
+from .. import DATA_DIR
+
+DATA = DATA_DIR / "soccer" / "intl_results.csv.gz"
 LIVE_URL = "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
 LIVE_CACHE = Path(os.environ.get("TMPDIR", "/tmp")) / "above500_intl_results.csv"
 LIVE_CACHE_MAX_AGE = 6 * 3600  # the source updates daily during the World Cup
@@ -289,7 +291,7 @@ def _run() -> dict:
     # what each squad implies (FiveThirtyEight's roster share). No-op unless a
     # current roster snapshot is present. Applied to the final ratings only,
     # so the historical backtest below stays a pure match-based evaluation.
-    from . import roster, club_roster
+    from . import club_roster, ea_roster as roster
     off, dfn, roster_blended = roster.blend_off_def(
         off, dfn, wc_teams, club_roster.roster_off_def(2026))
 

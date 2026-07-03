@@ -7,9 +7,9 @@ that here:
     player_SPI = club_SPI x (0.75 + 0.25 x minutes_fraction)
     nation_rating = mean(player_SPI over the squad's covered players)
 
-Club SPI comes from above500.club_spi (openfootball results); squads,
-clubs and minutes from above500/data/wc_squads.json (Transfermarkt, built
-by scripts/prepare_wc_squads.py). A player whose club is outside the
+Club SPI comes from above500.soccer.club_spi (openfootball results); squads,
+clubs and minutes from data/soccer/wc_squads.json (Transfermarkt, built
+by scripts/soccer/prepare_wc_squads.py). A player whose club is outside the
 openfootball league set has no club SPI and is skipped; nations with too
 few covered players get no club-roster rating and fall back to the EA-FC
 prior at blend time.
@@ -19,12 +19,13 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
-from pathlib import Path
+
+from .. import DATA_DIR
 
 from . import club_spi
 from .club_names import normalize
 
-SQUADS_FILE = Path(__file__).resolve().parent / "data" / "wc_squads.json"
+SQUADS_FILE = DATA_DIR / "soccer" / "wc_squads.json"
 SQUAD_CREDIT_FLOOR = 0.75   # 538: 75% just for being on the club squad
 MIN_COVERED = 8             # need this many rated players to trust a nation
 

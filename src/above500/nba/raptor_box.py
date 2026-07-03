@@ -26,7 +26,7 @@ Box scores come from free sources, stitched into one continuous history:
 538's historical file supplies named box stats through 2018-19, and the
 committed floor (NocturneBear's nba.com dump through 2023-24, then Basketball-
 Reference season totals) carries it to the current season. The floor is built
-offline by scripts/prepare_recent_box.py, so rendering makes no API calls;
+offline by scripts/nba/prepare_recent_box.py, so rendering makes no API calls;
 re-run that script and commit to push coverage forward each season.
 """
 
@@ -36,11 +36,12 @@ import csv
 import gzip
 import math
 from functools import lru_cache
-from pathlib import Path
 
-TRAIN_FILE = Path(__file__).resolve().parent / "data" / "nba_player_box.csv.gz"
-RECENT_FILE = Path(__file__).resolve().parent / "data" / "nba_recent_box.csv.gz"
-PO_FILE = Path(__file__).resolve().parent / "data" / "nba_po_box.csv.gz"
+from .. import DATA_DIR
+
+TRAIN_FILE = DATA_DIR / "nba" / "player_box.csv.gz"
+RECENT_FILE = DATA_DIR / "nba" / "recent_box.csv.gz"
+PO_FILE = DATA_DIR / "nba" / "po_box.csv.gz"
 
 # 538's historical box file supplies named features through this season; the
 # committed recent floor covers every season after it.
@@ -228,7 +229,7 @@ def _rate_season(players: list[dict]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# recent box scores: the committed floor (scripts/prepare_recent_box.py)
+# recent box scores: the committed floor (scripts/nba/prepare_recent_box.py)
 # ---------------------------------------------------------------------------
 
 @lru_cache(maxsize=1)
@@ -237,7 +238,7 @@ def _recent_totals() -> dict[int, dict[str, dict]]:
 
     The floor is built offline from free sources (NocturneBear + Basketball-
     Reference) and reaches the current season, so there is no render-time API
-    call here — re-run scripts/prepare_recent_box.py to push it forward.
+    call here — re-run scripts/nba/prepare_recent_box.py to push it forward.
     """
     seasons: dict[int, dict[str, dict]] = {}
     with gzip.open(RECENT_FILE, "rt", newline="") as f:

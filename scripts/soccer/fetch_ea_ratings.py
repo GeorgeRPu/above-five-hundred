@@ -10,10 +10,10 @@ club-level quality, which is the roster signal FiveThirtyEight blended
 into its World Cup SPI.
 
 Writes the derived per-nation aggregate to
-above500/data/roster_ratings.json (we keep only the 48 numbers, not EA's
+data/soccer/ea_ratings.json (we keep only the 48 numbers, not EA's
 player rows). Run by .github/workflows/refresh-roster.yml or directly:
 
-    python3 scripts/fetch_roster.py
+    uv run python scripts/soccer/fetch_ea_ratings.py
 """
 
 from __future__ import annotations
@@ -23,12 +23,10 @@ import io
 import sys
 import urllib.request
 from datetime import datetime, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from above500.wc_spi import FIFA_CODES  # the 48 nations, in our naming  # noqa: E402
+from above500.soccer.wc_spi import FIFA_CODES  # the 48 nations, in our naming
 
-OUT = Path(__file__).resolve().parent.parent / "above500" / "data" / "roster_ratings.json"
+from above500.soccer.ea_roster import ROSTER_FILE as OUT
 SOURCE = "https://raw.githubusercontent.com/ismailoksuz/EAFC26-DataHub/main/data/players.csv"
 TOP_N = 23   # a full matchday squad
 

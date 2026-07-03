@@ -4,7 +4,8 @@ pagetitle: "2026 World Cup Forecast | Above .500"
 
 ```{python}
 #| output: asis
-from above500 import wc_spi, render
+from above500 import render
+from above500.soccer import wc_spi
 from html import escape
 
 f = wc_spi.forecast()

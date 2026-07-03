@@ -15,20 +15,19 @@ the overlap period). The composite RAPTOR O/D from the historical file is
 retained for seasons outside the overlap. We also split the combined rebound
 and stock rates (R/36, SB/36) into offensive/defensive boards and steals/blocks
 (orb36, drb36, stl36, blk36), so the model can weight each by side the way 538
-does. The result is committed at above500/data/nba_player_box.csv.gz.
+does. The result is committed at data/nba/player_box.csv.gz.
 
 Usage:
     curl -sLO https://raw.githubusercontent.com/fivethirtyeight/nba-player-advanced-metrics/master/nba-data-historical.csv
     curl -sLO https://raw.githubusercontent.com/fivethirtyeight/data/master/nba-raptor/modern_RAPTOR_by_player.csv
-    python3 scripts/prepare_player_box.py nba-data-historical.csv modern_RAPTOR_by_player.csv
+    uv run python scripts/nba/prepare_player_box.py nba-data-historical.csv modern_RAPTOR_by_player.csv
 """
 
 import csv
 import gzip
 import sys
-from pathlib import Path
 
-OUT = Path(__file__).resolve().parent.parent / "above500" / "data" / "nba_player_box.csv.gz"
+from above500.nba.raptor_box import TRAIN_FILE as OUT
 
 FIELDS = ["season", "player_id", "player_name", "type", "team", "g", "min", "mpg",
           "p36", "r36", "a36", "sb36", "to36", "ts", "fg3ar", "ftar",

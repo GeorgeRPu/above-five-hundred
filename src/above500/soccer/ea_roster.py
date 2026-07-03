@@ -5,22 +5,23 @@ roster-based ratings derived from club football. This module supplies the
 roster half and the blend that shifts a team's match-based offence/defence
 a quarter of the way toward what its squad implies.
 
-The production prior is the club-match SPI in above500.club_roster (538's
+The production prior is the club-match SPI in above500.soccer.club_roster (538's
 own method). This module's `blend` shifts the match ratings toward any
 roster signal; it is gauge-aware and a no-op when coverage is too thin, so
 the SPI model degrades cleanly to match-only. An EA-FC squad-overall prior
-(scripts/fetch_roster.py -> data/roster_ratings.json, with historical
-snapshots in roster_ratings_history.json) is kept as a backtest comparison.
+(scripts/soccer/fetch_ea_ratings.py -> data/ea_ratings.json, with historical
+snapshots in ea_ratings_history.json) is kept as a backtest comparison.
 """
 
 from __future__ import annotations
 
 import json
 import statistics
-from pathlib import Path
 
-ROSTER_FILE = Path(__file__).resolve().parent / "data" / "roster_ratings.json"
-HISTORY_FILE = Path(__file__).resolve().parent / "data" / "roster_ratings_history.json"
+from .. import DATA_DIR
+
+ROSTER_FILE = DATA_DIR / "soccer" / "ea_ratings.json"
+HISTORY_FILE = DATA_DIR / "soccer" / "ea_ratings_history.json"
 DEFAULT_WEIGHT = 0.25      # 538's roster share
 MIN_COVERAGE = 0.35        # blend once a third of the field is rated
 

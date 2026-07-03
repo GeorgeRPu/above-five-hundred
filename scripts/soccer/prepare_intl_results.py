@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare the international football results file used by above500.wc_elo.
+"""Prepare the international football results file used by above500.soccer.wc_spi.
 
 Source: martj42/international_results (CC0), every men's full
 international since 1872, updated daily — including scheduled fixtures
@@ -13,15 +13,14 @@ time, so the committed archive is only the offline fallback.
 
 Usage:
     curl -sLO https://raw.githubusercontent.com/martj42/international_results/master/results.csv
-    python3 scripts/prepare_football_data.py results.csv
+    uv run python scripts/soccer/prepare_intl_results.py results.csv
 """
 
 import csv
 import gzip
 import sys
-from pathlib import Path
 
-OUT = Path(__file__).resolve().parent.parent / "above500" / "data" / "intl_results.csv.gz"
+from above500.soccer.wc_spi import DATA as OUT
 
 FIELDS = ["date", "home_team", "away_team", "home_score", "away_score",
           "tournament", "neutral"]

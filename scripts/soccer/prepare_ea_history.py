@@ -5,10 +5,10 @@ Source: ZaidGhazal/FIFA-Qatar-2022-WorldCup-Predictions on GitHub, which
 has sofifa-format player CSVs for FIFA 15 through FIFA 22.  For each
 World Cup edition (2014, 2018, 2022) we pick the closest pre-tournament
 FIFA release, apply the same age-weighted top-23 aggregation used by
-scripts/fetch_roster.py, and write the results to
-above500/data/roster_ratings_history.json.
+scripts/soccer/fetch_ea_ratings.py, and write the results to
+data/soccer/ea_ratings_history.json.
 
-    python3 scripts/prepare_roster_history.py
+    uv run python scripts/soccer/prepare_ea_history.py
 """
 
 from __future__ import annotations
@@ -19,9 +19,8 @@ import json
 import sys
 import urllib.request
 from datetime import datetime, timezone
-from pathlib import Path
 
-OUT = Path(__file__).resolve().parent.parent / "above500" / "data" / "roster_ratings_history.json"
+from above500.soccer.ea_roster import HISTORY_FILE as OUT
 TOP_N = 23
 
 BASE_URL = (

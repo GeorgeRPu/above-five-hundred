@@ -6,7 +6,7 @@ Data lineage (both CC BY 4.0 / openly licensed):
 - Neil Paine's maintained continuation of the 538 Elo file for seasons
   2016 onward: https://github.com/Neil-Paine-1/NBA-elo
 
-A trimmed merge of both is committed at above500/data/nba_games.csv.gz.
+A trimmed merge of both is committed at data/nba/games.csv.gz.
 At render time the model additionally tries to fetch games newer than the
 archive from Paine's repo, so the nightly build picks up fresh results
 automatically; if the fetch fails the committed archive is used alone.
@@ -33,7 +33,9 @@ from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 
-DATA = Path(__file__).resolve().parent / "data" / "nba_games.csv.gz"
+from .. import DATA_DIR
+
+DATA = DATA_DIR / "nba" / "games.csv.gz"
 LIVE_URL = "https://raw.githubusercontent.com/Neil-Paine-1/NBA-elo/main/nba_elo.csv"
 LIVE_CACHE = Path(os.environ.get("TMPDIR", "/tmp")) / "above500_nba_elo_remote.csv"
 LIVE_CACHE_MAX_AGE = 12 * 3600  # seconds

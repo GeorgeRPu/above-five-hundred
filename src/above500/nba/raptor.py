@@ -10,7 +10,7 @@ play-by-play and tracking inputs that were never released.
 So this page doesn't use 538's published ratings. Every number here is
 *Box-RAPTOR* — a reconstruction of RAPTOR's box-score component, learned from
 538's own box-stats-to-RAPTOR data and applied to box scores from 1976-77
-right through the current season (see above500.raptor_box). That gives one
+right through the current season (see above500.nba.raptor_box). That gives one
 self-computed rating per player per year across the whole history, on a single
 consistent scale, with no dependence on 538's published numbers; the fidelity
 backtest reports how closely it tracks the real thing on held-out seasons.
@@ -33,7 +33,7 @@ import unicodedata
 from datetime import datetime, timezone
 from functools import lru_cache
 
-from above500 import raptor_box
+from . import raptor_box
 
 # projection model -----------------------------------------------------------
 MAX_PRIOR_SEASONS = 4        # how many recent seasons feed a projection
@@ -226,7 +226,7 @@ def _backtest(params: dict) -> dict:
 
 def _team_logo(abbr: str | None) -> str | None:
     """Path to a player's team logo, or None when the team is unknown."""
-    from above500.nba_elo import TEAM_META
+    from .elo import TEAM_META
     valid = {a for a, _ in TEAM_META.values()}
     return f"/assets/logos/nba/{abbr.lower()}.png" if abbr in valid else None
 

@@ -1,24 +1,6 @@
 # Above .500
 
-A FiveThirtyEight-style home for my own sports models: win probabilities,
-power ratings, playoff and title odds — built with [Quarto](https://quarto.org),
-with every model re-run at render time.
-
-## How it works
-
-```
-above500/<model>.py          your model: exposes forecast() -> dict
-        │  imported & run at render time
-        ▼
-forecasts/<model>.qmd        Quarto page: Python cells render HTML
-        │  quarto render
-        ▼
-_site/                       static site, deployed to GitHub Pages
-```
-
-There is no committed data. Pages execute their models when the site is
-rendered, and a scheduled GitHub Action re-renders daily (10:30 UTC), so
-forecasts refresh automatically — push model code, not JSON.
+A FiveThirtyEight-style home for sports models.
 
 ## Quick start
 
@@ -96,7 +78,7 @@ Notes:
 
 ## Models
 
-### NBA Elo (`above500/nba_elo.py`)
+### NBA Elo (`src/above500/nba/elo.py`)
 
 Franchise Elo ratings computed from 75,705 real NBA/ABA games (1946-47
 to the present), following FiveThirtyEight's published methodology:
@@ -113,13 +95,13 @@ of ~3e-6, a strong independent check on the implementation.
 **Data**: [FiveThirtyEight's nbaallelo dataset](https://github.com/fivethirtyeight/data/tree/master/nba-elo)
 (CC BY 4.0) through 2014-15, continued from 2015-16 onward by
 [Neil Paine's maintained NBA-elo dataset](https://github.com/Neil-Paine-1/NBA-elo).
-Both are merged by `scripts/prepare_nba_data.py` into a committed
-`above500/data/nba_games.csv.gz` (~1 MB). At render time the model also
+Both are merged by `scripts/nba/prepare_games.py` into a committed
+`data/nba/games.csv.gz` (~1 MB). At render time the model also
 fetches any games newer than the archive from Paine's repo (falling
 back to the archive if offline), so the nightly build keeps ratings as
 current as the upstream data allows.
 
-### NBA RAPTOR Player Ratings (`above500/nba_raptor.py`)
+### NBA RAPTOR Player Ratings (`src/above500/nba/raptor.py`)
 
 FiveThirtyEight's RAPTOR was their NBA *player*-value model: a plus-minus
 rating in points per 100 possessions a player adds above league average
@@ -133,7 +115,7 @@ So this page doesn't use 538's published ratings at all. Every number is
 
 **1. Box-RAPTOR, a from-box-scores reconstruction for every season.** RAPTOR's
 *box* component is just a function of box-score rate stats.
-`above500/raptor_box.py` learns that mapping with a pure-Python ridge
+`src/above500/nba/raptor_box.py` learns that mapping with a pure-Python ridge
 regression trained on 538's box-component RAPTOR — the box half of 538's
 published box + on/off decomposition (available for 2014-2019 in their
 [modern RAPTOR file](https://github.com/fivethirtyeight/data/tree/master/nba-raptor))
@@ -168,22 +150,22 @@ season forward and 1.95 for a flat baseline.
   (CC BY 4.0) for box-score rate stats, joined with the box-component RAPTOR
   from [fivethirtyeight/data/nba-raptor](https://github.com/fivethirtyeight/data/tree/master/nba-raptor)
   (the training target, available for 2014-2019), aggregated to one row per
-  player-season by `scripts/prepare_player_box.py` into
-  `above500/data/nba_player_box.csv.gz`.
+  player-season by `scripts/nba/prepare_player_box.py` into
+  `data/nba/player_box.csv.gz`.
 - Recent regular-season box scores (the committed floor, 2019-20 to the
   current season) —
   [NocturneBear/NBA-Data-2010-2024](https://github.com/NocturneBear/NBA-Data-2010-2024)
   through 2023-24, then [Basketball-Reference](https://www.basketball-reference.com/)
   season totals for everything after, aggregated by
-  `scripts/prepare_recent_box.py` into `above500/data/nba_recent_box.csv.gz`.
+  `scripts/nba/prepare_recent_box.py` into `data/nba/recent_box.csv.gz`.
 - Playoff box scores (1976-77 to the current season) — NocturneBear's playoff
   dump (2010-11 through 2023-24) plus Basketball-Reference playoff totals for
-  all other seasons, aggregated by `scripts/prepare_po_box.py` into
-  `above500/data/nba_po_box.csv.gz`.
+  all other seasons, aggregated by `scripts/nba/prepare_po_box.py` into
+  `data/nba/po_box.csv.gz`.
 - Both floor files are free, so rendering makes no API calls; re-run the
   scripts and commit to push coverage forward each season.
 
-### 2026 World Cup Forecast (`above500/wc_spi.py`)
+### 2026 World Cup Forecast (`src/above500/soccer/wc_spi.py`)
 
 A Soccer Power Index (SPI) model in the style of FiveThirtyEight: every
 national team carries an **offensive** rating (goals it would score
@@ -201,9 +183,9 @@ prior** — FiveThirtyEight's actual roster method, not a video-game proxy.
 It is built in three steps:
 
 1. **Club SPI.** We rate club teams with the same online attack/defence
-   engine the international model uses (`above500/club_spi.py`, fit from
-   `above500/data/club_results.csv.gz`). The archive (84k matches, built
-   by `scripts/prepare_club_results.py`) combines domestic leagues —
+   engine the international model uses (`src/above500/soccer/club_spi.py`, fit from
+   `data/soccer/club_results.csv.gz`). The archive (84k matches, built
+   by `scripts/soccer/prepare_club_results.py`) combines domestic leagues —
    the big European top flights from
    [openfootball](https://github.com/openfootball/football.json) plus MLS,
    Liga MX, Brazil, Argentina, Japan, Scotland, Turkey, Belgium and Greece
@@ -218,7 +200,7 @@ It is built in three steps:
    weighted by minutes played, exactly as 538 did:
    `player_SPI = club_SPI × (0.75 + 0.25 × minutes_fraction)`.
 
-3. **Squad composite** (`above500/club_roster.py`). Each player carries
+3. **Squad composite** (`src/above500/soccer/club_roster.py`). Each player carries
    his club's offensive *and* defensive rating (so a squad from
    high-scoring clubs reads as an attacking side, 538's structure); a
    nation's roster prior is the mean over its squad. Squads are the
@@ -228,9 +210,9 @@ It is built in three steps:
    [Transfermarkt dump](https://github.com/salimt/football-datasets) for
    each player's club and minutes (the live 2026 edition, whose roster
    files don't exist yet, uses each nation's 26 most valuable citizens);
-   built by `scripts/prepare_wc_squads.py` →
-   `above500/data/wc_squads.json`, with club names reconciled by
-   `above500/club_names.py`. Nations with too little covered squad fall
+   built by `scripts/soccer/prepare_wc_squads.py` →
+   `data/soccer/wc_squads.json`, with club names reconciled by
+   `src/above500/soccer/club_names.py`. Nations with too little covered squad fall
    back cleanly to match-only.
 
 The blend pulls Argentina toward the field and lifts
@@ -249,9 +231,9 @@ noise. For reference, 538's own published forecasts scored 0.5772 (2018)
 and 0.6379 (2022) Brier on the same matches — on that 128-match subset
 our EA-blend variant (0.5980) beats them and the shipped club blend
 (0.6108) roughly ties them, though 538 leads on accuracy (56.3% vs
-~52%). The EA-FC prior remains available (`above500/roster.py`,
-`scripts/fetch_roster.py` → `roster_ratings.json`, historical snapshots
-from `scripts/prepare_roster_history.py`) and switching production to it
+~52%). The EA-FC prior remains available (`src/above500/soccer/ea_roster.py`,
+`scripts/soccer/fetch_ea_ratings.py` → `ea_ratings.json`, historical snapshots
+from `scripts/soccer/prepare_ea_history.py`) and switching production to it
 is a one-line change in `wc_spi.py`.
 
 Tournament odds come from 10,000 Monte Carlo runs of the real 2026
@@ -276,22 +258,33 @@ forecasts/                one page per model
   nba-elo.qmd
   nba-raptor.qmd
   world-cup-2026.qmd
-above500/                Python package: models + HTML renderers
-  nba_elo.py             NBA Elo ratings + 1955+ backtest
-  nba_raptor.py          NBA RAPTOR ratings + next-season projection
-  raptor_box.py          Box-RAPTOR: RAPTOR rebuilt from box scores, to ~2026
-  wc_spi.py              international football SPI + World Cup sim
-  roster.py              roster-strength prior + EA/club ensemble blend
-  club_spi.py            club-team SPI engine (openfootball results)
-  club_roster.py         538 club-SPI roster prior (squads × club SPI × minutes)
-  club_names.py          club-name normalization across data sources
+src/above500/            Python package: models + HTML renderers
   render.py              payload -> HTML (tables, matchups, sparklines)
-  data/                  committed data archives (CC BY 4.0 / CC0)
+  nba/                   NBA models
+    elo.py               NBA Elo ratings + 1955+ backtest
+    raptor.py            NBA RAPTOR ratings + next-season projection
+    raptor_box.py        Box-RAPTOR: RAPTOR rebuilt from box scores, to ~2026
+  soccer/                soccer models
+    wc_spi.py            international football SPI + World Cup sim
+    club_spi.py          club-team SPI engine (openfootball results)
+    club_roster.py       538 club-SPI roster prior (squads × club SPI × minutes)
+    ea_roster.py         EA-FC roster prior + EA/club ensemble blend
+    club_names.py        club-name normalization across data sources
+data/                    committed data archives (CC BY 4.0 / CC0)
+  nba/                   NBA game and box-score archives
+  soccer/                soccer results, squads, and roster priors
 scripts/                 regenerate the data archives
-  prepare_po_box.py      build playoff box-score floor (NocturneBear + BRef)
-  prepare_roster_history.py  build historical WC roster priors (FIFA 15/18/22)
-  prepare_club_results.py    build club-match archive (openfootball)
-  prepare_wc_squads.py       build WC squads + clubs + minutes (Transfermarkt)
+  nba/
+    prepare_games.py     merge the NBA/ABA game archives (538 + Paine)
+    prepare_player_box.py    build player box-score history + RAPTOR target
+    prepare_recent_box.py    build recent box-score floor (weekly CI job)
+    prepare_po_box.py    build playoff box-score floor (NocturneBear + BRef)
+  soccer/
+    prepare_intl_results.py  build international results archive (martj42)
+    prepare_club_results.py  build club-match archive (openfootball)
+    prepare_wc_squads.py     build WC squads + clubs + minutes (Transfermarkt)
+    fetch_ea_ratings.py      fetch EA-FC national ratings (weekly CI job)
+    prepare_ea_history.py    build historical WC roster priors (FIFA 15/18/22)
 styles/above500.scss     538-inspired Quarto theme
 .github/workflows/deploy.yml   render + deploy, nightly cron
 ```

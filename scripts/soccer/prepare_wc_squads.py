@@ -19,10 +19,10 @@ For the live 2026 edition, whose roster files don't exist yet, we fall
 back to each nation's 26 most valuable citizens by Transfermarkt market
 value. Each player's primary club and minutes fraction become the 538
 credit weight. The compact result is written to
-above500/data/wc_squads.json; club names stay in source form and are
+data/soccer/wc_squads.json; club names stay in source form and are
 matched to club-SPI at render time via above500.club_names.
 
-    python3 scripts/prepare_wc_squads.py
+    uv run python scripts/soccer/prepare_wc_squads.py
 """
 
 from __future__ import annotations
@@ -32,16 +32,11 @@ import gzip
 import io
 import json
 import re
-import sys
 import urllib.request
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
-from above500.wc_spi import FIFA_CODES  # noqa: E402  (2026 field, our naming)
+from above500.soccer.wc_spi import DATA as INTL, FIFA_CODES  # 2026 field, our naming
 
-OUT = ROOT / "above500" / "data" / "wc_squads.json"
-INTL = ROOT / "above500" / "data" / "intl_results.csv.gz"
+from above500.soccer.club_roster import SQUADS_FILE as OUT
 BASE = "https://raw.githubusercontent.com/salimt/football-datasets/main/datalake/transfermarkt"
 PROFILES = f"{BASE}/player_profiles/player_profiles.csv"
 MARKET = f"{BASE}/player_market_value/player_market_value.csv"

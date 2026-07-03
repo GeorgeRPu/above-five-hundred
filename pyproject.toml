@@ -12,8 +12,8 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
-[tool.uv]
-# The models are pure-stdlib; `above500` is imported from the repo root at
-# render time rather than installed, so uv only needs to manage the
-# environment, not build this project as a package.
-package = false
+# src-layout: `above500` lives under src/ and is installed editable by
+# `uv sync`, which is how the Quarto pages import it at render time.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

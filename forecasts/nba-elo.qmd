@@ -4,10 +4,11 @@ pagetitle: "NBA Team Elo Ratings | Above .500"
 
 ```{python}
 #| output: asis
-from above500 import nba_elo, render
+from above500 import render
+from above500.nba import elo
 from html import escape
 
-f = nba_elo.forecast()
+f = elo.forecast()
 
 print(f'<span class="kicker">{escape(f["league"])}</span>')
 print(f'<h1 class="headline">{escape(f["name"])}</h1>')

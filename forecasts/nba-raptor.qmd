@@ -4,10 +4,11 @@ pagetitle: "NBA RAPTOR Player Ratings | Above .500"
 
 ```{python}
 #| output: asis
-from above500 import nba_raptor, render
+from above500 import render
+from above500.nba import raptor
 from html import escape
 
-f = nba_raptor.forecast()
+f = raptor.forecast()
 
 print(f'<span class="kicker">{escape(f["league"])}</span>')
 print(f'<h1 class="headline">{escape(f["name"])}</h1>')

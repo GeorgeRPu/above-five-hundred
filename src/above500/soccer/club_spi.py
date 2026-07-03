@@ -3,10 +3,10 @@
 FiveThirtyEight's roster-based World Cup SPI rests on "SPI ratings for
 thousands of club teams." This module reproduces the club side with the
 same online attack/defence fit the international model uses
-(above500.wc_spi): every club carries an offensive and a defensive
+(above500.soccer.wc_spi): every club carries an offensive and a defensive
 rating, updated game by game from club results.
 
-We fit chronologically over above500/data/club_results.csv.gz and
+We fit chronologically over data/soccer/club_results.csv.gz and
 snapshot each club's rating at the opening day of every World Cup we
 forecast or backtest, so the roster prior for a given tournament uses
 only club form available at that time. Ratings are returned as a
@@ -20,12 +20,13 @@ import csv
 import gzip
 import math
 from functools import lru_cache
-from pathlib import Path
+
+from .. import DATA_DIR
 
 from .club_names import normalize
 from .wc_spi import _spi  # points-share from off/def vs a neutral baseline
 
-DATA = Path(__file__).resolve().parent / "data" / "club_results.csv.gz"
+DATA = DATA_DIR / "soccer" / "club_results.csv.gz"
 
 K_BASE = 0.07           # learning rate for club offence/defence
 K_LEAGUE = 0.05         # learning rate for the per-league strength offset
