@@ -2,6 +2,8 @@ project:
   type: website
   output-dir: _site
   execute-dir: project
+  render:
+    - "**/*.qmd"   # site pages only; keeps docs/ model cards out of the build
   resources:
     - assets/logos/**
 
