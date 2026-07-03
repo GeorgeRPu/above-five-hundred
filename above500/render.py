@@ -537,6 +537,58 @@ def backtest_models_table(backtest: dict) -> str:
     )
 
 
+def wc_backtest_table(wc_backtest: dict) -> str:
+    """Match-only vs. the two roster priors on historical World Cup matches."""
+    if not wc_backtest:
+        return ""
+
+    specs = [
+        ("match_only_total", "Match-only SPI"),
+        ("ea_total", "+ EA-FC roster blend"),
+        ("club_total", "+ club-SPI roster blend"),
+    ]
+    rows = []
+    for key, label in specs:
+        m = wc_backtest.get(key)
+        if not m:
+            continue
+        rows.append(
+            "<tr>"
+            f'<td class="l"><strong>{escape(label)}</strong></td>'
+            f'<td class="num">{m["n"]:,}</td>'
+            f'<td class="num">{m["accuracy"]:.1%}</td>'
+            f'<td class="num">{m["brier"]:.4f}</td>'
+            f'<td class="num">{m["logloss"]:.4f}</td>'
+            "</tr>"
+        )
+    if not rows:
+        return ""
+
+    years = [e["year"] for e in wc_backtest.get("per_wc", [])]
+    note = f"World Cup matches only ({', '.join(str(y) for y in years)})"
+
+    return (
+        section_head("World Cup roster-blend backtest", note)
+        + '<table class="fte"><thead><tr>'
+        + '<th class="l">Model</th><th>Games</th><th>Accuracy</th>'
+        + '<th>Brier score</th><th>Log loss</th>'
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
+        + '<p class="table-note">Ratings update walk-forward through each '
+        + "tournament (as the nightly production re-fit does); the roster prior "
+        + "is fixed at opening day and shifts ratings 25% toward it. The model "
+        + "uses club-match SPI — 538’s own method: real World Cup rosters, each "
+        + "player rated by his club’s offensive/defensive SPI weighted by "
+        + "minutes played. The EA-FC video-game prior is shown for comparison "
+        + "and currently scores better — open club data links continents too "
+        + "thinly to calibrate club form across them. For reference, "
+        + "FiveThirtyEight’s own published forecasts scored 0.577 (2018) and "
+        + "0.638 (2022) Brier on these matches. Lower Brier/log loss is "
+        + "better.</p>"
+    )
+
+
 def calibration_table(backtest: dict) -> str:
     """Predicted vs. actual home win rate by forecast bucket."""
     rows = []

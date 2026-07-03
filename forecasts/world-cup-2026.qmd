@@ -47,6 +47,8 @@ print('<details class="model-performance">')
 print('<summary>Model performance &amp; backtest</summary>')
 print(render.backtest_models_table(f["backtest"]))
 print(render.calibration_table(f["backtest"]))
+if f.get("wc_backtest"):
+    print(render.wc_backtest_table(f["wc_backtest"]))
 print('</details>')
 print(render.methodology_box(f))
 ```

@@ -48,6 +48,11 @@ GOAL_MODEL_FROM = "1990-01-01"   # window for the league-average goal baselines
 BACKTEST_FROM = "1994-01-01"     # 3-points-for-a-win era
 N_SIMULATIONS = 100_000
 WC_START = "2026-06-01"
+HISTORICAL_WCS = {
+    2014: "2014-06-12",
+    2018: "2018-06-14",
+    2022: "2022-11-20",
+}
 
 # Group letters keyed by an anchor team (groups come from the fixture
 # graph; the letters match the official draw)
@@ -192,6 +197,19 @@ def _load() -> tuple[list[dict], list[dict]]:
         return _parse(f)
 
 
+def _group_fixtures() -> list[dict]:
+    """The complete group stage from the committed archive.
+
+    Live data is preferred for results and ratings, but once the tournament
+    starts its played group games drop out of the live fixture list, leaving
+    too few to derive the 12 groups. The committed archive always holds the
+    full pre-tournament fixture list, so the bracket structure comes from
+    there; live results enter the simulation as fixed scores.
+    """
+    with gzip.open(DATA, "rt", newline="") as f:
+        return _parse(f)[1]
+
+
 # ---------------------------------------------------------------------------
 # ratings: online attack/defence fit
 # ---------------------------------------------------------------------------
@@ -203,6 +221,7 @@ def _mean(xs: list[int]) -> float:
 @lru_cache(maxsize=1)
 def _run() -> dict:
     played, fixtures = _load()
+    group_fixtures = _group_fixtures()
 
     # League-average goal baselines (home / away / neutral), modern era.
     hg, ag, ng = [], [], []
@@ -218,11 +237,16 @@ def _run() -> dict:
 
     off: dict[str, float] = {}   # log offensive strength
     dfn: dict[str, float] = {}   # log defensive strength
-    wc_teams = {m["home"] for m in fixtures} | {m["away"] for m in fixtures}
+    wc_teams = {m["home"] for m in group_fixtures} | {m["away"] for m in group_fixtures}
     history_raw: dict[str, list[tuple[float, float]]] = {}
     raw_predictions = []         # (lam_home, lam_away, outcome)
+    wc_snapshots: dict[int, dict] = {}  # year -> {off, dfn} at WC start
+    wc_walk: dict[int, list[dict]] = {}  # year -> pre-match ratings, walk-forward
 
     for m in played:
+        for wc_year, wc_start in HISTORICAL_WCS.items():
+            if wc_year not in wc_snapshots and m["date"] >= wc_start:
+                wc_snapshots[wc_year] = {"off": dict(off), "dfn": dict(dfn)}
         h, a = m["home"], m["away"]
         ao_h = off.setdefault(h, 0.0); ad_h = dfn.setdefault(h, 0.0)
         ao_a = off.setdefault(a, 0.0); ad_a = dfn.setdefault(a, 0.0)
@@ -235,6 +259,17 @@ def _run() -> dict:
             outcome = ("H" if m["home_goals"] > m["away_goals"]
                        else "A" if m["home_goals"] < m["away_goals"] else "D")
             raw_predictions.append((lam_h, lam_a, outcome))
+            if m["tournament"] == "FIFA World Cup":
+                y = int(m["date"][:4])
+                if y in HISTORICAL_WCS:
+                    # pre-game ratings; the WC backtest re-predicts from these
+                    # so ratings walk forward through the tournament
+                    wc_walk.setdefault(y, []).append({
+                        "home": h, "away": a, "neutral": m["neutral"],
+                        "off_h": ao_h, "dfn_h": ad_h,
+                        "off_a": ao_a, "dfn_a": ad_a,
+                        "outcome": outcome,
+                    })
 
         # stochastic gradient step on the Poisson log-likelihood
         gh, ga = min(m["home_goals"], GOAL_CAP), min(m["away_goals"], GOAL_CAP)
@@ -254,8 +289,62 @@ def _run() -> dict:
     # what each squad implies (FiveThirtyEight's roster share). No-op unless a
     # current roster snapshot is present. Applied to the final ratings only,
     # so the historical backtest below stays a pure match-based evaluation.
-    from . import roster
-    off, dfn, roster_blended = roster.blend(off, dfn, wc_teams)
+    from . import roster, club_roster
+    off, dfn, roster_blended = roster.blend_off_def(
+        off, dfn, wc_teams, club_roster.roster_off_def(2026))
+
+    # Historical WC roster backtest. Ratings walk forward through each
+    # tournament (each match predicted with everything learned up to it, as
+    # the nightly production re-fit does and as 538's published forecasts
+    # did); the roster prior is fixed at the tournament's opening day and
+    # enters as a constant per-team adjustment. Three prediction sets:
+    # match-only, EA-FC roster blend, and club-SPI roster blend.
+    wc_backtest_data: dict[int, dict] = {}
+    for wc_year in sorted(wc_walk):
+        snap = wc_snapshots.get(wc_year)
+        walk = wc_walk[wc_year]
+        if not snap or not walk:
+            continue
+        hist_teams = {w["home"] for w in walk} | {w["away"] for w in walk}
+
+        def _deltas(blended):
+            b_off, b_dfn, ok = blended
+            if not ok:
+                return None
+            return ({t: b_off[t] - snap["off"].get(t, 0.0) for t in hist_teams},
+                    {t: b_dfn[t] - snap["dfn"].get(t, 0.0) for t in hist_teams})
+
+        def _preds(deltas):
+            d_off, d_dfn = deltas if deltas else ({}, {})
+            preds = []
+            for w in walk:
+                base_h = NEUTRAL if w["neutral"] else HOME
+                base_a = NEUTRAL if w["neutral"] else AWAY
+                lh = math.exp(base_h + w["off_h"] + d_off.get(w["home"], 0.0)
+                              - w["dfn_a"] - d_dfn.get(w["away"], 0.0))
+                la = math.exp(base_a + w["off_a"] + d_off.get(w["away"], 0.0)
+                              - w["dfn_h"] - d_dfn.get(w["home"], 0.0))
+                preds.append((lh, la, w["outcome"]))
+            return preds
+
+        ea_deltas = _deltas(roster.blend(
+            snap["off"], snap["dfn"], hist_teams,
+            roster_ratings=roster.load_roster_for_year(wc_year)))
+        club_deltas = _deltas(roster.blend_off_def(
+            snap["off"], snap["dfn"], hist_teams,
+            club_roster.roster_off_def(wc_year)))
+        club_flat_deltas = _deltas(roster.blend(
+            snap["off"], snap["dfn"], hist_teams,
+            roster_ratings=club_roster.roster_ratings(wc_year)))
+
+        wc_backtest_data[wc_year] = {
+            "n_teams": len(hist_teams),
+            "n_matches": len(walk),
+            "match_only": _preds(None),
+            "ea": _preds(ea_deltas) if ea_deltas else [],
+            "club": _preds(club_deltas) if club_deltas else [],
+            "club_flat": _preds(club_flat_deltas) if club_flat_deltas else [],
+        }
 
     # The fit only identifies rating *differences*, so the absolute zero is a
     # free gauge. Anchor it on the World Cup field: SPI/Off/Def are expressed
@@ -271,12 +360,16 @@ def _run() -> dict:
         "roster_blended": roster_blended,
         "HOME": HOME, "AWAY": AWAY, "NEUTRAL": NEUTRAL,
         "fixtures": fixtures,
+        "group_fixtures": group_fixtures,
+        "wc_walk": wc_walk,
+        "wc_snapshots": wc_snapshots,
         "history": history,
         "raw_predictions": raw_predictions,
         "n_played": len(played),
         "data_through": played[-1]["date"],
         "wc_results": [m for m in played
                        if m["tournament"] == "FIFA World Cup" and m["date"] >= WC_START],
+        "wc_backtest_data": wc_backtest_data,
     }
 
 
@@ -330,6 +423,34 @@ def _backtest(run: dict) -> dict:
             "calibration": buckets, "decades": []}
 
 
+def _wc_backtest(run: dict) -> dict | None:
+    """Score match-only, EA-FC blend and club-SPI blend on historical WCs."""
+    wc_data = run.get("wc_backtest_data", {})
+    if not wc_data:
+        return None
+
+    keys = ("match_only", "ea", "club", "club_flat")
+    totals: dict[str, list] = {k: [] for k in keys}
+    per_wc = []
+
+    for year in sorted(wc_data):
+        d = wc_data[year]
+        entry = {"year": year, "n": d["n_matches"]}
+        for k in keys:
+            if not d.get(k):
+                continue
+            scored = [(outcome_probs(lh, la), o) for lh, la, o in d[k]]
+            entry[k] = _score3(scored)
+            totals[k].extend(scored)
+        per_wc.append(entry)
+
+    result: dict = {"per_wc": per_wc}
+    for k in keys:
+        if totals[k]:
+            result[f"{k}_total"] = {**_score3(totals[k]), "n": len(totals[k])}
+    return result
+
+
 # ---------------------------------------------------------------------------
 # tournament simulation
 # ---------------------------------------------------------------------------
@@ -370,7 +491,7 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
     rng = random.Random(2026)
     off, dfn = run["off"], run["dfn"]
     NEUTRAL, HOME, AWAY = run["NEUTRAL"], run["HOME"], run["AWAY"]
-    fixtures = run["fixtures"]
+    fixtures = run["group_fixtures"]
     groups = _derive_groups(fixtures)
     group_of = {t: g for g, members in groups.items() for t in members}
     teams = sorted(group_of)
@@ -553,13 +674,18 @@ def forecast() -> dict:
                        "runners-up and eight best thirds, and uses the official bracket "
                        "with third-place slots randomized within FIFA's allocation rules. "
                        + ("Following FiveThirtyEight, the ratings then blend 25% toward a "
-                          "roster-strength prior built from EA Sports FC 26 player ratings "
-                          "(an age-weighted mean of each nation's best 23 overalls); the "
-                          "backtest above reflects the match-only model. " if run["roster_blended"] else
-                          "A roster/club-form blend (FiveThirtyEight used 25%) is wired in "
-                          "but inactive until a squad snapshot is available. ")
-                       + "Match data: martj42/international_results (CC0), updated daily.",
+                          "club-match roster prior — 538's own method. We rate club teams "
+                          "with the same engine (from domestic leagues plus continental cups "
+                          "that calibrate league against league), score each squad player by "
+                          "his club's SPI weighted by minutes played, and composite over the "
+                          "national squad. The overall backtest above reflects the match-only "
+                          "model. " if run["roster_blended"] else
+                          "A club-match roster blend (FiveThirtyEight used 25%) is wired in "
+                          "but inactive until enough of the field is covered. ")
+                       + "Match data: martj42/international_results (CC0), updated daily. "
+                       + "Club results: openfootball; squads: Transfermarkt.",
         "standings": standings,
         "upcoming": upcoming,
         "backtest": _backtest(run),
+        "wc_backtest": _wc_backtest(run),
     }

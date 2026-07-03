@@ -196,22 +196,63 @@ from a Poisson goal model on those ratings; backtested on ~30,000
 matches since 1994 (59.1% three-way accuracy, 0.521 multiclass Brier vs
 0.631 for base rates).
 
-Following 538, the ratings blend 25% toward a **roster-strength prior**
-built from EA Sports FC 26 player ratings (an age-weighted mean of each
-nation's best 23 overalls). This nudges ageing squads down and young,
-deep squads up — the correction a results-only model misses. With the
-blend, Argentina drops from 22% to 16% and Spain/England/France/Germany
-all rise, matching observer consensus far better.
+Following 538, the ratings blend 25% toward a **club-match roster
+prior** — FiveThirtyEight's actual roster method, not a video-game proxy.
+It is built in three steps:
 
-The prior comes from [EAFC26-DataHub](https://github.com/ismailoksuz/EAFC26-DataHub),
-which commits the full FC 26 database to GitHub — so `scripts/fetch_roster.py`
-builds the snapshot from one unauthenticated fetch (no API key, no rate
-limit). It writes the derived per-nation aggregate to
-`above500/data/roster_ratings.json` (just the 48 numbers, not EA's player
-rows), which the SPI model reads at render time. The **Refresh World Cup
-roster snapshot** workflow rebuilds it weekly. The blend is a no-op until
-the snapshot covers at least half the field, so the model degrades
-cleanly to match-only.
+1. **Club SPI.** We rate club teams with the same online attack/defence
+   engine the international model uses (`above500/club_spi.py`, fit from
+   `above500/data/club_results.csv.gz`). The archive (84k matches, built
+   by `scripts/prepare_club_results.py`) combines domestic leagues —
+   the big European top flights from
+   [openfootball](https://github.com/openfootball/football.json) plus MLS,
+   Liga MX, Brazil, Argentina, Japan, Scotland, Turkey, Belgium and Greece
+   from [football-data.co.uk](https://www.football-data.co.uk/) — with
+   **continental cups** (UEFA Champions/Europa/Conference, Copa
+   Libertadores/Sudamericana, Club World Cup). The cups are essential: a
+   two-level fit learns each league a strength offset from these
+   inter-league games, so a club isn't trapped in its league's own
+   zero-sum scale.
+
+2. **Player ratings.** Each squad player is scored by his club's SPI
+   weighted by minutes played, exactly as 538 did:
+   `player_SPI = club_SPI × (0.75 + 0.25 × minutes_fraction)`.
+
+3. **Squad composite** (`above500/club_roster.py`). Each player carries
+   his club's offensive *and* defensive rating (so a squad from
+   high-scoring clubs reads as an attacking side, 538's structure); a
+   nation's roster prior is the mean over its squad. Squads are the
+   **real World Cup rosters** from
+   [openfootball/worldcup](https://github.com/openfootball/worldcup),
+   joined by name and birthdate to a
+   [Transfermarkt dump](https://github.com/salimt/football-datasets) for
+   each player's club and minutes (the live 2026 edition, whose roster
+   files don't exist yet, uses each nation's 26 most valuable citizens);
+   built by `scripts/prepare_wc_squads.py` →
+   `above500/data/wc_squads.json`, with club names reconciled by
+   `above500/club_names.py`. Nations with too little covered squad fall
+   back cleanly to match-only.
+
+The blend pulls Argentina toward the field and lifts
+England/Germany/Spain/France, closer to observer consensus.
+
+**Backtest.** Over 192 World Cup matches (2014/2018/2022), ratings walk
+forward through each tournament — every match predicted with only
+pre-game information, exactly as the nightly production re-fit works and
+as FiveThirtyEight's published forecasts did — with the roster prior
+fixed at each opening day. The club-SPI blend edges match-only
+(0.5881 vs 0.5878 Brier is a wash; 52.1% accuracy both) and an EA-FC
+video-game prior scores best (54.2%, 0.5772): cross-*continental* club
+form is still thinly linked (the only Europe–South America club matches
+are the Club World Cup), and club-name resolution across sources adds
+noise. For reference, 538's own published forecasts scored 0.5772 (2018)
+and 0.6379 (2022) Brier on the same matches — on that 128-match subset
+our EA-blend variant (0.5980) beats them and the shipped club blend
+(0.6108) roughly ties them, though 538 leads on accuracy (56.3% vs
+~52%). The EA-FC prior remains available (`above500/roster.py`,
+`scripts/fetch_roster.py` → `roster_ratings.json`, historical snapshots
+from `scripts/prepare_roster_history.py`) and switching production to it
+is a one-line change in `wc_spi.py`.
 
 Tournament odds come from 10,000 Monte Carlo runs of the real 2026
 bracket: the actual group fixtures (groups are derived from the fixture
@@ -240,10 +281,17 @@ above500/                Python package: models + HTML renderers
   nba_raptor.py          NBA RAPTOR ratings + next-season projection
   raptor_box.py          Box-RAPTOR: RAPTOR rebuilt from box scores, to ~2026
   wc_spi.py              international football SPI + World Cup sim
+  roster.py              roster-strength prior + EA/club ensemble blend
+  club_spi.py            club-team SPI engine (openfootball results)
+  club_roster.py         538 club-SPI roster prior (squads × club SPI × minutes)
+  club_names.py          club-name normalization across data sources
   render.py              payload -> HTML (tables, matchups, sparklines)
   data/                  committed data archives (CC BY 4.0 / CC0)
 scripts/                 regenerate the data archives
   prepare_po_box.py      build playoff box-score floor (NocturneBear + BRef)
+  prepare_roster_history.py  build historical WC roster priors (FIFA 15/18/22)
+  prepare_club_results.py    build club-match archive (openfootball)
+  prepare_wc_squads.py       build WC squads + clubs + minutes (Transfermarkt)
 styles/above500.scss     538-inspired Quarto theme
 .github/workflows/deploy.yml   render + deploy, nightly cron
 ```

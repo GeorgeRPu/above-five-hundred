@@ -1,0 +1,1933 @@
+{
+  "source": "stefanoleone992/fifa-players-dataset via ZaidGhazal (sofifa.com)",
+  "metric": "age-weighted mean of top-23 overall ratings",
+  "updated": "2026-06-18T10:06:55Z",
+  "editions": {
+    "2014": {
+      "fifa_version": 15,
+      "wc_start": "2014-06-12",
+      "teams": {
+        "Albania": {
+          "rating": 66.397,
+          "n_players": 23
+        },
+        "Algeria": {
+          "rating": 72.182,
+          "n_players": 23
+        },
+        "Angola": {
+          "rating": 61.295,
+          "n_players": 6
+        },
+        "Antigua and Barbuda": {
+          "rating": 57.805,
+          "n_players": 4
+        },
+        "Argentina": {
+          "rating": 80.953,
+          "n_players": 23
+        },
+        "Armenia": {
+          "rating": 67.167,
+          "n_players": 6
+        },
+        "Australia": {
+          "rating": 68.87,
+          "n_players": 23
+        },
+        "Austria": {
+          "rating": 72.584,
+          "n_players": 23
+        },
+        "Azerbaijan": {
+          "rating": 61.0,
+          "n_players": 2
+        },
+        "Bahrain": {
+          "rating": 51.68,
+          "n_players": 1
+        },
+        "Barbados": {
+          "rating": 55.0,
+          "n_players": 2
+        },
+        "Belarus": {
+          "rating": 62.602,
+          "n_players": 16
+        },
+        "Belgium": {
+          "rating": 79.27,
+          "n_players": 23
+        },
+        "Benin": {
+          "rating": 61.991,
+          "n_players": 14
+        },
+        "Bermuda": {
+          "rating": 58.08,
+          "n_players": 2
+        },
+        "Bolivia": {
+          "rating": 57.655,
+          "n_players": 23
+        },
+        "Bosnia and Herzegovina": {
+          "rating": 72.437,
+          "n_players": 23
+        },
+        "Brazil": {
+          "rating": 81.783,
+          "n_players": 23
+        },
+        "Bulgaria": {
+          "rating": 67.69,
+          "n_players": 23
+        },
+        "Burkina Faso": {
+          "rating": 64.454,
+          "n_players": 18
+        },
+        "Burundi": {
+          "rating": 55.525,
+          "n_players": 2
+        },
+        "Cambodia": {
+          "rating": 63.0,
+          "n_players": 1
+        },
+        "Cameroon": {
+          "rating": 73.505,
+          "n_players": 23
+        },
+        "Canada": {
+          "rating": 62.766,
+          "n_players": 23
+        },
+        "Cape Verde": {
+          "rating": 63.489,
+          "n_players": 23
+        },
+        "Central African Republic": {
+          "rating": 58.634,
+          "n_players": 7
+        },
+        "Chile": {
+          "rating": 74.624,
+          "n_players": 23
+        },
+        "China": {
+          "rating": 56.95,
+          "n_players": 2
+        },
+        "Colombia": {
+          "rating": 77.391,
+          "n_players": 23
+        },
+        "Comoros": {
+          "rating": 65.25,
+          "n_players": 4
+        },
+        "Congo": {
+          "rating": 63.153,
+          "n_players": 13
+        },
+        "Costa Rica": {
+          "rating": 67.752,
+          "n_players": 23
+        },
+        "Croatia": {
+          "rating": 74.214,
+          "n_players": 23
+        },
+        "Cuba": {
+          "rating": 58.4,
+          "n_players": 2
+        },
+        "Cura\u00e7ao": {
+          "rating": 60.752,
+          "n_players": 5
+        },
+        "Cyprus": {
+          "rating": 58.933,
+          "n_players": 3
+        },
+        "Czech Republic": {
+          "rating": 71.9,
+          "n_players": 23
+        },
+        "DR Congo": {
+          "rating": 68.202,
+          "n_players": 23
+        },
+        "Denmark": {
+          "rating": 73.451,
+          "n_players": 23
+        },
+        "Ecuador": {
+          "rating": 69.232,
+          "n_players": 23
+        },
+        "Egypt": {
+          "rating": 66.473,
+          "n_players": 23
+        },
+        "England": {
+          "rating": 79.087,
+          "n_players": 23
+        },
+        "Equatorial Guinea": {
+          "rating": 64.29,
+          "n_players": 4
+        },
+        "Estonia": {
+          "rating": 59.296,
+          "n_players": 9
+        },
+        "Faroe Islands": {
+          "rating": 50.182,
+          "n_players": 4
+        },
+        "Fiji": {
+          "rating": 61.0,
+          "n_players": 1
+        },
+        "Finland": {
+          "rating": 66.713,
+          "n_players": 23
+        },
+        "France": {
+          "rating": 81.0,
+          "n_players": 23
+        },
+        "Gabon": {
+          "rating": 66.43,
+          "n_players": 12
+        },
+        "Gambia": {
+          "rating": 59.019,
+          "n_players": 12
+        },
+        "Georgia": {
+          "rating": 62.249,
+          "n_players": 16
+        },
+        "Germany": {
+          "rating": 83.556,
+          "n_players": 23
+        },
+        "Ghana": {
+          "rating": 72.13,
+          "n_players": 23
+        },
+        "Gibraltar": {
+          "rating": 64.0,
+          "n_players": 1
+        },
+        "Greece": {
+          "rating": 73.261,
+          "n_players": 23
+        },
+        "Grenada": {
+          "rating": 47.27,
+          "n_players": 2
+        },
+        "Guam": {
+          "rating": 68.0,
+          "n_players": 1
+        },
+        "Guatemala": {
+          "rating": 66.0,
+          "n_players": 3
+        },
+        "Guinea": {
+          "rating": 64.175,
+          "n_players": 23
+        },
+        "Guinea Bissau": {
+          "rating": 62.678,
+          "n_players": 10
+        },
+        "Guyana": {
+          "rating": 62.98,
+          "n_players": 1
+        },
+        "Haiti": {
+          "rating": 62.334,
+          "n_players": 7
+        },
+        "Honduras": {
+          "rating": 64.94,
+          "n_players": 18
+        },
+        "Hungary": {
+          "rating": 68.815,
+          "n_players": 23
+        },
+        "Iceland": {
+          "rating": 67.504,
+          "n_players": 23
+        },
+        "India": {
+          "rating": 55.947,
+          "n_players": 23
+        },
+        "Indonesia": {
+          "rating": 54.52,
+          "n_players": 1
+        },
+        "Iran": {
+          "rating": 61.967,
+          "n_players": 6
+        },
+        "Iraq": {
+          "rating": 63.704,
+          "n_players": 5
+        },
+        "Israel": {
+          "rating": 65.4,
+          "n_players": 20
+        },
+        "Italy": {
+          "rating": 79.65,
+          "n_players": 23
+        },
+        "Ivory Coast": {
+          "rating": 73.864,
+          "n_players": 23
+        },
+        "Jamaica": {
+          "rating": 64.375,
+          "n_players": 23
+        },
+        "Japan": {
+          "rating": 71.847,
+          "n_players": 23
+        },
+        "Jordan": {
+          "rating": 58.196,
+          "n_players": 11
+        },
+        "Kazakhstan": {
+          "rating": 63.667,
+          "n_players": 3
+        },
+        "Kenya": {
+          "rating": 63.13,
+          "n_players": 6
+        },
+        "Korea DPR": {
+          "rating": 61.57,
+          "n_players": 2
+        },
+        "Kosovo": {
+          "rating": 61.854,
+          "n_players": 7
+        },
+        "Kuwait": {
+          "rating": 62.04,
+          "n_players": 1
+        },
+        "Kyrgyzstan": {
+          "rating": 62.0,
+          "n_players": 1
+        },
+        "Latvia": {
+          "rating": 60.118,
+          "n_players": 11
+        },
+        "Lebanon": {
+          "rating": 60.74,
+          "n_players": 3
+        },
+        "Liberia": {
+          "rating": 66.268,
+          "n_players": 5
+        },
+        "Libya": {
+          "rating": 57.1,
+          "n_players": 3
+        },
+        "Liechtenstein": {
+          "rating": 52.638,
+          "n_players": 8
+        },
+        "Lithuania": {
+          "rating": 56.691,
+          "n_players": 16
+        },
+        "Luxembourg": {
+          "rating": 57.836,
+          "n_players": 5
+        },
+        "Madagascar": {
+          "rating": 58.807,
+          "n_players": 3
+        },
+        "Mali": {
+          "rating": 70.032,
+          "n_players": 23
+        },
+        "Malta": {
+          "rating": 47.7,
+          "n_players": 4
+        },
+        "Mauritania": {
+          "rating": 57.93,
+          "n_players": 3
+        },
+        "Mexico": {
+          "rating": 74.584,
+          "n_players": 23
+        },
+        "Moldova": {
+          "rating": 62.891,
+          "n_players": 7
+        },
+        "Montenegro": {
+          "rating": 62.239,
+          "n_players": 19
+        },
+        "Montserrat": {
+          "rating": 60.0,
+          "n_players": 1
+        },
+        "Morocco": {
+          "rating": 74.152,
+          "n_players": 23
+        },
+        "Mozambique": {
+          "rating": 70.8,
+          "n_players": 5
+        },
+        "Netherlands": {
+          "rating": 78.315,
+          "n_players": 23
+        },
+        "New Caledonia": {
+          "rating": 64.333,
+          "n_players": 3
+        },
+        "New Zealand": {
+          "rating": 59.964,
+          "n_players": 23
+        },
+        "Niger": {
+          "rating": 59.525,
+          "n_players": 2
+        },
+        "Nigeria": {
+          "rating": 72.379,
+          "n_players": 23
+        },
+        "North Macedonia": {
+          "rating": 59.836,
+          "n_players": 23
+        },
+        "Northern Ireland": {
+          "rating": 67.435,
+          "n_players": 23
+        },
+        "Norway": {
+          "rating": 71.739,
+          "n_players": 23
+        },
+        "Oman": {
+          "rating": 60.68,
+          "n_players": 1
+        },
+        "Palestine": {
+          "rating": 61.387,
+          "n_players": 3
+        },
+        "Panama": {
+          "rating": 58.682,
+          "n_players": 12
+        },
+        "Paraguay": {
+          "rating": 71.879,
+          "n_players": 23
+        },
+        "Peru": {
+          "rating": 67.537,
+          "n_players": 23
+        },
+        "Philippines": {
+          "rating": 57.2,
+          "n_players": 4
+        },
+        "Poland": {
+          "rating": 74.935,
+          "n_players": 23
+        },
+        "Portugal": {
+          "rating": 78.273,
+          "n_players": 23
+        },
+        "Republic of Ireland": {
+          "rating": 72.505,
+          "n_players": 23
+        },
+        "Romania": {
+          "rating": 71.478,
+          "n_players": 23
+        },
+        "Russia": {
+          "rating": 75.37,
+          "n_players": 23
+        },
+        "Saint Kitts and Nevis": {
+          "rating": 61.5,
+          "n_players": 2
+        },
+        "Saint Lucia": {
+          "rating": 54.6,
+          "n_players": 1
+        },
+        "Saudi Arabia": {
+          "rating": 69.15,
+          "n_players": 23
+        },
+        "Scotland": {
+          "rating": 72.609,
+          "n_players": 23
+        },
+        "Senegal": {
+          "rating": 75.13,
+          "n_players": 23
+        },
+        "Serbia": {
+          "rating": 75.517,
+          "n_players": 23
+        },
+        "Sierra Leone": {
+          "rating": 60.156,
+          "n_players": 8
+        },
+        "Slovakia": {
+          "rating": 67.913,
+          "n_players": 23
+        },
+        "Slovenia": {
+          "rating": 69.782,
+          "n_players": 23
+        },
+        "South Africa": {
+          "rating": 71.478,
+          "n_players": 23
+        },
+        "South Korea": {
+          "rating": 70.28,
+          "n_players": 23
+        },
+        "Spain": {
+          "rating": 83.203,
+          "n_players": 23
+        },
+        "Sudan": {
+          "rating": 52.415,
+          "n_players": 2
+        },
+        "Suriname": {
+          "rating": 60.5,
+          "n_players": 2
+        },
+        "Sweden": {
+          "rating": 73.339,
+          "n_players": 23
+        },
+        "Switzerland": {
+          "rating": 75.236,
+          "n_players": 23
+        },
+        "Syria": {
+          "rating": 62.94,
+          "n_players": 3
+        },
+        "Thailand": {
+          "rating": 65.0,
+          "n_players": 1
+        },
+        "Togo": {
+          "rating": 66.751,
+          "n_players": 9
+        },
+        "Trinidad and Tobago": {
+          "rating": 58.8,
+          "n_players": 12
+        },
+        "Tunisia": {
+          "rating": 65.322,
+          "n_players": 23
+        },
+        "Turkey": {
+          "rating": 77.05,
+          "n_players": 23
+        },
+        "Turkmenistan": {
+          "rating": 54.94,
+          "n_players": 1
+        },
+        "Uganda": {
+          "rating": 56.716,
+          "n_players": 5
+        },
+        "Ukraine": {
+          "rating": 66.276,
+          "n_players": 23
+        },
+        "United States": {
+          "rating": 72.577,
+          "n_players": 23
+        },
+        "Uruguay": {
+          "rating": 75.886,
+          "n_players": 23
+        },
+        "Uzbekistan": {
+          "rating": 65.64,
+          "n_players": 6
+        },
+        "Venezuela": {
+          "rating": 71.804,
+          "n_players": 23
+        },
+        "Wales": {
+          "rating": 70.703,
+          "n_players": 23
+        },
+        "Zambia": {
+          "rating": 68.25,
+          "n_players": 4
+        },
+        "Zimbabwe": {
+          "rating": 59.492,
+          "n_players": 12
+        }
+      }
+    },
+    "2018": {
+      "fifa_version": 18,
+      "wc_start": "2018-06-14",
+      "teams": {
+        "Afghanistan": {
+          "rating": 52.433,
+          "n_players": 3
+        },
+        "Albania": {
+          "rating": 69.295,
+          "n_players": 23
+        },
+        "Algeria": {
+          "rating": 75.565,
+          "n_players": 23
+        },
+        "Angola": {
+          "rating": 64.563,
+          "n_players": 15
+        },
+        "Antigua and Barbuda": {
+          "rating": 56.382,
+          "n_players": 5
+        },
+        "Argentina": {
+          "rating": 82.844,
+          "n_players": 23
+        },
+        "Armenia": {
+          "rating": 64.223,
+          "n_players": 14
+        },
+        "Australia": {
+          "rating": 71.739,
+          "n_players": 23
+        },
+        "Austria": {
+          "rating": 75.683,
+          "n_players": 23
+        },
+        "Azerbaijan": {
+          "rating": 61.436,
+          "n_players": 7
+        },
+        "Barbados": {
+          "rating": 61.1,
+          "n_players": 1
+        },
+        "Belarus": {
+          "rating": 66.384,
+          "n_players": 9
+        },
+        "Belgium": {
+          "rating": 82.206,
+          "n_players": 23
+        },
+        "Belize": {
+          "rating": 64.0,
+          "n_players": 1
+        },
+        "Benin": {
+          "rating": 64.439,
+          "n_players": 14
+        },
+        "Bermuda": {
+          "rating": 60.64,
+          "n_players": 4
+        },
+        "Bolivia": {
+          "rating": 62.182,
+          "n_players": 23
+        },
+        "Bosnia and Herzegovina": {
+          "rating": 73.761,
+          "n_players": 23
+        },
+        "Brazil": {
+          "rating": 83.123,
+          "n_players": 23
+        },
+        "Brunei Darussalam": {
+          "rating": 48.4,
+          "n_players": 1
+        },
+        "Bulgaria": {
+          "rating": 67.253,
+          "n_players": 23
+        },
+        "Burkina Faso": {
+          "rating": 66.039,
+          "n_players": 15
+        },
+        "Burundi": {
+          "rating": 64.0,
+          "n_players": 1
+        },
+        "Cameroon": {
+          "rating": 73.563,
+          "n_players": 23
+        },
+        "Canada": {
+          "rating": 66.73,
+          "n_players": 23
+        },
+        "Cape Verde": {
+          "rating": 66.494,
+          "n_players": 22
+        },
+        "Central African Republic": {
+          "rating": 61.9,
+          "n_players": 4
+        },
+        "Chad": {
+          "rating": 68.0,
+          "n_players": 2
+        },
+        "Chile": {
+          "rating": 77.469,
+          "n_players": 23
+        },
+        "China": {
+          "rating": 65.799,
+          "n_players": 23
+        },
+        "Colombia": {
+          "rating": 77.531,
+          "n_players": 23
+        },
+        "Comoros": {
+          "rating": 66.587,
+          "n_players": 9
+        },
+        "Congo": {
+          "rating": 62.173,
+          "n_players": 22
+        },
+        "Costa Rica": {
+          "rating": 70.452,
+          "n_players": 23
+        },
+        "Croatia": {
+          "rating": 77.467,
+          "n_players": 23
+        },
+        "Cuba": {
+          "rating": 68.38,
+          "n_players": 2
+        },
+        "Cura\u00e7ao": {
+          "rating": 67.727,
+          "n_players": 11
+        },
+        "Cyprus": {
+          "rating": 59.067,
+          "n_players": 11
+        },
+        "Czech Republic": {
+          "rating": 74.017,
+          "n_players": 23
+        },
+        "DR Congo": {
+          "rating": 73.13,
+          "n_players": 23
+        },
+        "Denmark": {
+          "rating": 76.572,
+          "n_players": 23
+        },
+        "Dominican Republic": {
+          "rating": 74.5,
+          "n_players": 2
+        },
+        "Ecuador": {
+          "rating": 70.619,
+          "n_players": 23
+        },
+        "Egypt": {
+          "rating": 69.751,
+          "n_players": 23
+        },
+        "El Salvador": {
+          "rating": 62.88,
+          "n_players": 2
+        },
+        "England": {
+          "rating": 81.087,
+          "n_players": 23
+        },
+        "Equatorial Guinea": {
+          "rating": 63.435,
+          "n_players": 6
+        },
+        "Eritrea": {
+          "rating": 58.22,
+          "n_players": 1
+        },
+        "Estonia": {
+          "rating": 61.662,
+          "n_players": 9
+        },
+        "Ethiopia": {
+          "rating": 61.48,
+          "n_players": 2
+        },
+        "Faroe Islands": {
+          "rating": 59.233,
+          "n_players": 6
+        },
+        "Fiji": {
+          "rating": 69.0,
+          "n_players": 1
+        },
+        "Finland": {
+          "rating": 69.326,
+          "n_players": 23
+        },
+        "France": {
+          "rating": 82.944,
+          "n_players": 23
+        },
+        "Gabon": {
+          "rating": 68.85,
+          "n_players": 12
+        },
+        "Gambia": {
+          "rating": 64.017,
+          "n_players": 16
+        },
+        "Georgia": {
+          "rating": 68.27,
+          "n_players": 23
+        },
+        "Germany": {
+          "rating": 84.217,
+          "n_players": 23
+        },
+        "Ghana": {
+          "rating": 74.357,
+          "n_players": 23
+        },
+        "Gibraltar": {
+          "rating": 60.16,
+          "n_players": 2
+        },
+        "Greece": {
+          "rating": 75.659,
+          "n_players": 23
+        },
+        "Grenada": {
+          "rating": 64.0,
+          "n_players": 1
+        },
+        "Guam": {
+          "rating": 69.0,
+          "n_players": 1
+        },
+        "Guatemala": {
+          "rating": 63.36,
+          "n_players": 1
+        },
+        "Guinea": {
+          "rating": 67.96,
+          "n_players": 23
+        },
+        "Guinea Bissau": {
+          "rating": 64.165,
+          "n_players": 16
+        },
+        "Guyana": {
+          "rating": 57.82,
+          "n_players": 5
+        },
+        "Haiti": {
+          "rating": 60.071,
+          "n_players": 14
+        },
+        "Honduras": {
+          "rating": 62.676,
+          "n_players": 13
+        },
+        "Hong Kong": {
+          "rating": 44.28,
+          "n_players": 1
+        },
+        "Hungary": {
+          "rating": 71.144,
+          "n_players": 23
+        },
+        "Iceland": {
+          "rating": 69.904,
+          "n_players": 23
+        },
+        "India": {
+          "rating": 56.381,
+          "n_players": 23
+        },
+        "Iran": {
+          "rating": 66.656,
+          "n_players": 17
+        },
+        "Iraq": {
+          "rating": 66.256,
+          "n_players": 9
+        },
+        "Israel": {
+          "rating": 70.057,
+          "n_players": 12
+        },
+        "Italy": {
+          "rating": 81.51,
+          "n_players": 23
+        },
+        "Ivory Coast": {
+          "rating": 75.77,
+          "n_players": 23
+        },
+        "Jamaica": {
+          "rating": 66.064,
+          "n_players": 23
+        },
+        "Japan": {
+          "rating": 74.261,
+          "n_players": 23
+        },
+        "Kazakhstan": {
+          "rating": 66.0,
+          "n_players": 3
+        },
+        "Kenya": {
+          "rating": 61.747,
+          "n_players": 7
+        },
+        "Korea DPR": {
+          "rating": 53.245,
+          "n_players": 6
+        },
+        "Kosovo": {
+          "rating": 67.685,
+          "n_players": 23
+        },
+        "Kuwait": {
+          "rating": 63.87,
+          "n_players": 2
+        },
+        "Kyrgyzstan": {
+          "rating": 58.0,
+          "n_players": 1
+        },
+        "Latvia": {
+          "rating": 61.429,
+          "n_players": 7
+        },
+        "Lebanon": {
+          "rating": 62.6,
+          "n_players": 5
+        },
+        "Liberia": {
+          "rating": 59.425,
+          "n_players": 2
+        },
+        "Libya": {
+          "rating": 67.5,
+          "n_players": 2
+        },
+        "Liechtenstein": {
+          "rating": 62.427,
+          "n_players": 3
+        },
+        "Lithuania": {
+          "rating": 60.176,
+          "n_players": 12
+        },
+        "Luxembourg": {
+          "rating": 62.926,
+          "n_players": 8
+        },
+        "Madagascar": {
+          "rating": 60.39,
+          "n_players": 4
+        },
+        "Mali": {
+          "rating": 70.842,
+          "n_players": 23
+        },
+        "Malta": {
+          "rating": 55.13,
+          "n_players": 3
+        },
+        "Mauritania": {
+          "rating": 66.5,
+          "n_players": 2
+        },
+        "Mauritius": {
+          "rating": 67.0,
+          "n_players": 1
+        },
+        "Mexico": {
+          "rating": 77.443,
+          "n_players": 23
+        },
+        "Moldova": {
+          "rating": 64.572,
+          "n_players": 6
+        },
+        "Montenegro": {
+          "rating": 67.055,
+          "n_players": 23
+        },
+        "Montserrat": {
+          "rating": 63.6,
+          "n_players": 4
+        },
+        "Morocco": {
+          "rating": 75.159,
+          "n_players": 23
+        },
+        "Mozambique": {
+          "rating": 72.333,
+          "n_players": 3
+        },
+        "Namibia": {
+          "rating": 60.72,
+          "n_players": 2
+        },
+        "Netherlands": {
+          "rating": 79.652,
+          "n_players": 23
+        },
+        "New Caledonia": {
+          "rating": 68.5,
+          "n_players": 2
+        },
+        "New Zealand": {
+          "rating": 64.612,
+          "n_players": 23
+        },
+        "Niger": {
+          "rating": 68.667,
+          "n_players": 3
+        },
+        "Nigeria": {
+          "rating": 73.5,
+          "n_players": 23
+        },
+        "North Macedonia": {
+          "rating": 63.039,
+          "n_players": 17
+        },
+        "Northern Ireland": {
+          "rating": 68.565,
+          "n_players": 23
+        },
+        "Norway": {
+          "rating": 73.492,
+          "n_players": 23
+        },
+        "Oman": {
+          "rating": 46.72,
+          "n_players": 1
+        },
+        "Palestine": {
+          "rating": 63.247,
+          "n_players": 3
+        },
+        "Panama": {
+          "rating": 62.719,
+          "n_players": 16
+        },
+        "Paraguay": {
+          "rating": 74.047,
+          "n_players": 23
+        },
+        "Peru": {
+          "rating": 68.767,
+          "n_players": 23
+        },
+        "Philippines": {
+          "rating": 61.667,
+          "n_players": 3
+        },
+        "Poland": {
+          "rating": 75.957,
+          "n_players": 23
+        },
+        "Portugal": {
+          "rating": 80.697,
+          "n_players": 23
+        },
+        "Puerto Rico": {
+          "rating": 44.22,
+          "n_players": 2
+        },
+        "Qatar": {
+          "rating": 61.768,
+          "n_players": 6
+        },
+        "Republic of Ireland": {
+          "rating": 73.41,
+          "n_players": 23
+        },
+        "Romania": {
+          "rating": 72.291,
+          "n_players": 23
+        },
+        "Russia": {
+          "rating": 76.87,
+          "n_players": 23
+        },
+        "Saint Kitts and Nevis": {
+          "rating": 60.373,
+          "n_players": 3
+        },
+        "Saint Lucia": {
+          "rating": 62.0,
+          "n_players": 1
+        },
+        "San Marino": {
+          "rating": 54.0,
+          "n_players": 1
+        },
+        "Saudi Arabia": {
+          "rating": 71.565,
+          "n_players": 23
+        },
+        "Scotland": {
+          "rating": 73.391,
+          "n_players": 23
+        },
+        "Senegal": {
+          "rating": 76.843,
+          "n_players": 23
+        },
+        "Serbia": {
+          "rating": 77.435,
+          "n_players": 23
+        },
+        "Sierra Leone": {
+          "rating": 62.449,
+          "n_players": 9
+        },
+        "Slovakia": {
+          "rating": 70.092,
+          "n_players": 23
+        },
+        "Slovenia": {
+          "rating": 72.915,
+          "n_players": 23
+        },
+        "Somalia": {
+          "rating": 68.0,
+          "n_players": 1
+        },
+        "South Africa": {
+          "rating": 71.495,
+          "n_players": 23
+        },
+        "South Korea": {
+          "rating": 73.522,
+          "n_players": 23
+        },
+        "Spain": {
+          "rating": 84.261,
+          "n_players": 23
+        },
+        "Sri Lanka": {
+          "rating": 60.0,
+          "n_players": 1
+        },
+        "Sudan": {
+          "rating": 60.0,
+          "n_players": 2
+        },
+        "Suriname": {
+          "rating": 67.933,
+          "n_players": 3
+        },
+        "Swaziland": {
+          "rating": 57.33,
+          "n_players": 1
+        },
+        "Sweden": {
+          "rating": 75.052,
+          "n_players": 23
+        },
+        "Switzerland": {
+          "rating": 77.087,
+          "n_players": 23
+        },
+        "Syria": {
+          "rating": 67.08,
+          "n_players": 5
+        },
+        "S\u00e3o Tom\u00e9 e Pr\u00edncipe": {
+          "rating": 60.16,
+          "n_players": 1
+        },
+        "Tanzania": {
+          "rating": 65.64,
+          "n_players": 2
+        },
+        "Thailand": {
+          "rating": 65.0,
+          "n_players": 1
+        },
+        "Togo": {
+          "rating": 66.798,
+          "n_players": 9
+        },
+        "Trinidad and Tobago": {
+          "rating": 65.336,
+          "n_players": 9
+        },
+        "Tunisia": {
+          "rating": 67.8,
+          "n_players": 23
+        },
+        "Turkey": {
+          "rating": 77.221,
+          "n_players": 23
+        },
+        "Turkmenistan": {
+          "rating": 59.22,
+          "n_players": 1
+        },
+        "Uganda": {
+          "rating": 62.75,
+          "n_players": 4
+        },
+        "Ukraine": {
+          "rating": 73.288,
+          "n_players": 23
+        },
+        "United States": {
+          "rating": 73.976,
+          "n_players": 23
+        },
+        "Uruguay": {
+          "rating": 77.248,
+          "n_players": 23
+        },
+        "Uzbekistan": {
+          "rating": 67.44,
+          "n_players": 5
+        },
+        "Venezuela": {
+          "rating": 71.91,
+          "n_players": 23
+        },
+        "Vietnam": {
+          "rating": 61.0,
+          "n_players": 1
+        },
+        "Wales": {
+          "rating": 72.831,
+          "n_players": 23
+        },
+        "Zambia": {
+          "rating": 61.335,
+          "n_players": 6
+        },
+        "Zimbabwe": {
+          "rating": 61.893,
+          "n_players": 11
+        }
+      }
+    },
+    "2022": {
+      "fifa_version": 22,
+      "wc_start": "2022-11-20",
+      "teams": {
+        "Afghanistan": {
+          "rating": 64.0,
+          "n_players": 1
+        },
+        "Albania": {
+          "rating": 69.345,
+          "n_players": 23
+        },
+        "Algeria": {
+          "rating": 74.145,
+          "n_players": 23
+        },
+        "Andorra": {
+          "rating": 56.32,
+          "n_players": 1
+        },
+        "Angola": {
+          "rating": 64.619,
+          "n_players": 17
+        },
+        "Antigua and Barbuda": {
+          "rating": 65.333,
+          "n_players": 3
+        },
+        "Argentina": {
+          "rating": 81.261,
+          "n_players": 23
+        },
+        "Armenia": {
+          "rating": 61.437,
+          "n_players": 7
+        },
+        "Australia": {
+          "rating": 71.017,
+          "n_players": 23
+        },
+        "Austria": {
+          "rating": 76.362,
+          "n_players": 23
+        },
+        "Azerbaijan": {
+          "rating": 58.446,
+          "n_players": 8
+        },
+        "Barbados": {
+          "rating": 62.0,
+          "n_players": 1
+        },
+        "Belarus": {
+          "rating": 59.205,
+          "n_players": 4
+        },
+        "Belgium": {
+          "rating": 79.976,
+          "n_players": 23
+        },
+        "Belize": {
+          "rating": 63.0,
+          "n_players": 1
+        },
+        "Benin": {
+          "rating": 66.679,
+          "n_players": 10
+        },
+        "Bermuda": {
+          "rating": 61.6,
+          "n_players": 1
+        },
+        "Bhutan": {
+          "rating": 63.0,
+          "n_players": 1
+        },
+        "Bolivia": {
+          "rating": 66.87,
+          "n_players": 23
+        },
+        "Bosnia and Herzegovina": {
+          "rating": 71.217,
+          "n_players": 23
+        },
+        "Brazil": {
+          "rating": 83.783,
+          "n_players": 23
+        },
+        "Bulgaria": {
+          "rating": 60.984,
+          "n_players": 23
+        },
+        "Burkina Faso": {
+          "rating": 63.489,
+          "n_players": 16
+        },
+        "Burundi": {
+          "rating": 59.796,
+          "n_players": 9
+        },
+        "Cameroon": {
+          "rating": 73.59,
+          "n_players": 23
+        },
+        "Canada": {
+          "rating": 69.823,
+          "n_players": 23
+        },
+        "Cape Verde": {
+          "rating": 63.679,
+          "n_players": 21
+        },
+        "Central African Republic": {
+          "rating": 72.5,
+          "n_players": 2
+        },
+        "Chad": {
+          "rating": 67.5,
+          "n_players": 2
+        },
+        "Chile": {
+          "rating": 71.783,
+          "n_players": 23
+        },
+        "China": {
+          "rating": 68.398,
+          "n_players": 23
+        },
+        "Chinese Taipei": {
+          "rating": 60.74,
+          "n_players": 2
+        },
+        "Colombia": {
+          "rating": 77.048,
+          "n_players": 23
+        },
+        "Comoros": {
+          "rating": 63.252,
+          "n_players": 8
+        },
+        "Congo": {
+          "rating": 63.704,
+          "n_players": 16
+        },
+        "Costa Rica": {
+          "rating": 63.943,
+          "n_players": 23
+        },
+        "Croatia": {
+          "rating": 77.523,
+          "n_players": 23
+        },
+        "Cuba": {
+          "rating": 59.08,
+          "n_players": 3
+        },
+        "Cura\u00e7ao": {
+          "rating": 63.771,
+          "n_players": 11
+        },
+        "Cyprus": {
+          "rating": 57.307,
+          "n_players": 19
+        },
+        "Czech Republic": {
+          "rating": 76.217,
+          "n_players": 23
+        },
+        "DR Congo": {
+          "rating": 72.11,
+          "n_players": 23
+        },
+        "Denmark": {
+          "rating": 76.391,
+          "n_players": 23
+        },
+        "Dominican Republic": {
+          "rating": 62.435,
+          "n_players": 4
+        },
+        "Ecuador": {
+          "rating": 70.546,
+          "n_players": 23
+        },
+        "Egypt": {
+          "rating": 71.57,
+          "n_players": 12
+        },
+        "El Salvador": {
+          "rating": 61.557,
+          "n_players": 4
+        },
+        "England": {
+          "rating": 83.164,
+          "n_players": 23
+        },
+        "Equatorial Guinea": {
+          "rating": 67.938,
+          "n_players": 5
+        },
+        "Eritrea": {
+          "rating": 38.86,
+          "n_players": 1
+        },
+        "Estonia": {
+          "rating": 51.0,
+          "n_players": 1
+        },
+        "Ethiopia": {
+          "rating": 40.96,
+          "n_players": 1
+        },
+        "Faroe Islands": {
+          "rating": 63.0,
+          "n_players": 3
+        },
+        "Fiji": {
+          "rating": 54.72,
+          "n_players": 1
+        },
+        "Finland": {
+          "rating": 68.314,
+          "n_players": 23
+        },
+        "France": {
+          "rating": 83.548,
+          "n_players": 23
+        },
+        "Gabon": {
+          "rating": 67.822,
+          "n_players": 12
+        },
+        "Gambia": {
+          "rating": 66.097,
+          "n_players": 23
+        },
+        "Georgia": {
+          "rating": 66.899,
+          "n_players": 23
+        },
+        "Germany": {
+          "rating": 83.0,
+          "n_players": 23
+        },
+        "Ghana": {
+          "rating": 74.043,
+          "n_players": 23
+        },
+        "Gibraltar": {
+          "rating": 58.28,
+          "n_players": 1
+        },
+        "Greece": {
+          "rating": 74.479,
+          "n_players": 23
+        },
+        "Grenada": {
+          "rating": 63.0,
+          "n_players": 6
+        },
+        "Guam": {
+          "rating": 49.4,
+          "n_players": 1
+        },
+        "Guatemala": {
+          "rating": 61.5,
+          "n_players": 2
+        },
+        "Guinea": {
+          "rating": 67.999,
+          "n_players": 23
+        },
+        "Guinea Bissau": {
+          "rating": 63.642,
+          "n_players": 22
+        },
+        "Guyana": {
+          "rating": 55.584,
+          "n_players": 7
+        },
+        "Haiti": {
+          "rating": 61.832,
+          "n_players": 10
+        },
+        "Honduras": {
+          "rating": 60.118,
+          "n_players": 11
+        },
+        "Hong Kong": {
+          "rating": 51.29,
+          "n_players": 2
+        },
+        "Hungary": {
+          "rating": 69.137,
+          "n_players": 23
+        },
+        "Iceland": {
+          "rating": 68.057,
+          "n_players": 23
+        },
+        "India": {
+          "rating": 60.087,
+          "n_players": 23
+        },
+        "Indonesia": {
+          "rating": 44.88,
+          "n_players": 1
+        },
+        "Iran": {
+          "rating": 66.651,
+          "n_players": 21
+        },
+        "Iraq": {
+          "rating": 61.415,
+          "n_players": 4
+        },
+        "Israel": {
+          "rating": 63.826,
+          "n_players": 22
+        },
+        "Italy": {
+          "rating": 81.863,
+          "n_players": 23
+        },
+        "Ivory Coast": {
+          "rating": 76.446,
+          "n_players": 23
+        },
+        "Jamaica": {
+          "rating": 69.808,
+          "n_players": 23
+        },
+        "Japan": {
+          "rating": 73.739,
+          "n_players": 23
+        },
+        "Jordan": {
+          "rating": 63.133,
+          "n_players": 3
+        },
+        "Kazakhstan": {
+          "rating": 67.667,
+          "n_players": 3
+        },
+        "Kenya": {
+          "rating": 64.938,
+          "n_players": 8
+        },
+        "Korea DPR": {
+          "rating": 32.0,
+          "n_players": 1
+        },
+        "Kosovo": {
+          "rating": 70.696,
+          "n_players": 23
+        },
+        "Kyrgyzstan": {
+          "rating": 57.2,
+          "n_players": 1
+        },
+        "Latvia": {
+          "rating": 55.571,
+          "n_players": 7
+        },
+        "Lebanon": {
+          "rating": 57.06,
+          "n_players": 2
+        },
+        "Liberia": {
+          "rating": 62.912,
+          "n_players": 5
+        },
+        "Libya": {
+          "rating": 73.333,
+          "n_players": 3
+        },
+        "Lithuania": {
+          "rating": 58.436,
+          "n_players": 9
+        },
+        "Luxembourg": {
+          "rating": 62.635,
+          "n_players": 15
+        },
+        "Madagascar": {
+          "rating": 60.968,
+          "n_players": 8
+        },
+        "Malawi": {
+          "rating": 58.375,
+          "n_players": 2
+        },
+        "Malaysia": {
+          "rating": 55.58,
+          "n_players": 2
+        },
+        "Mali": {
+          "rating": 72.386,
+          "n_players": 23
+        },
+        "Malta": {
+          "rating": 63.5,
+          "n_players": 2
+        },
+        "Mauritania": {
+          "rating": 61.973,
+          "n_players": 3
+        },
+        "Mauritius": {
+          "rating": 67.0,
+          "n_players": 1
+        },
+        "Mexico": {
+          "rating": 75.884,
+          "n_players": 23
+        },
+        "Moldova": {
+          "rating": 60.597,
+          "n_players": 8
+        },
+        "Montenegro": {
+          "rating": 67.656,
+          "n_players": 23
+        },
+        "Montserrat": {
+          "rating": 59.544,
+          "n_players": 5
+        },
+        "Morocco": {
+          "rating": 75.89,
+          "n_players": 23
+        },
+        "Mozambique": {
+          "rating": 65.26,
+          "n_players": 4
+        },
+        "Namibia": {
+          "rating": 66.927,
+          "n_players": 3
+        },
+        "Netherlands": {
+          "rating": 80.65,
+          "n_players": 23
+        },
+        "New Zealand": {
+          "rating": 65.489,
+          "n_players": 23
+        },
+        "Niger": {
+          "rating": 60.0,
+          "n_players": 3
+        },
+        "Nigeria": {
+          "rating": 75.666,
+          "n_players": 23
+        },
+        "North Macedonia": {
+          "rating": 65.742,
+          "n_players": 23
+        },
+        "Northern Ireland": {
+          "rating": 67.344,
+          "n_players": 23
+        },
+        "Norway": {
+          "rating": 74.743,
+          "n_players": 23
+        },
+        "Palestine": {
+          "rating": 61.5,
+          "n_players": 2
+        },
+        "Panama": {
+          "rating": 63.577,
+          "n_players": 17
+        },
+        "Papua New Guinea": {
+          "rating": 65.0,
+          "n_players": 1
+        },
+        "Paraguay": {
+          "rating": 73.304,
+          "n_players": 23
+        },
+        "Peru": {
+          "rating": 71.197,
+          "n_players": 23
+        },
+        "Philippines": {
+          "rating": 64.893,
+          "n_players": 6
+        },
+        "Poland": {
+          "rating": 74.0,
+          "n_players": 23
+        },
+        "Portugal": {
+          "rating": 82.13,
+          "n_players": 23
+        },
+        "Puerto Rico": {
+          "rating": 56.14,
+          "n_players": 2
+        },
+        "Republic of Ireland": {
+          "rating": 71.29,
+          "n_players": 23
+        },
+        "Romania": {
+          "rating": 71.981,
+          "n_players": 23
+        },
+        "Russia": {
+          "rating": 74.786,
+          "n_players": 23
+        },
+        "Saint Kitts and Nevis": {
+          "rating": 59.056,
+          "n_players": 5
+        },
+        "Saint Lucia": {
+          "rating": 64.0,
+          "n_players": 1
+        },
+        "Saudi Arabia": {
+          "rating": 69.304,
+          "n_players": 23
+        },
+        "Scotland": {
+          "rating": 74.913,
+          "n_players": 23
+        },
+        "Senegal": {
+          "rating": 76.217,
+          "n_players": 23
+        },
+        "Serbia": {
+          "rating": 76.797,
+          "n_players": 23
+        },
+        "Sierra Leone": {
+          "rating": 64.559,
+          "n_players": 10
+        },
+        "Slovakia": {
+          "rating": 72.723,
+          "n_players": 23
+        },
+        "Slovenia": {
+          "rating": 71.34,
+          "n_players": 23
+        },
+        "South Africa": {
+          "rating": 69.206,
+          "n_players": 23
+        },
+        "South Korea": {
+          "rating": 72.478,
+          "n_players": 23
+        },
+        "South Sudan": {
+          "rating": 49.074,
+          "n_players": 5
+        },
+        "Spain": {
+          "rating": 83.435,
+          "n_players": 23
+        },
+        "Sudan": {
+          "rating": 62.333,
+          "n_players": 3
+        },
+        "Suriname": {
+          "rating": 64.775,
+          "n_players": 11
+        },
+        "Sweden": {
+          "rating": 74.923,
+          "n_players": 23
+        },
+        "Switzerland": {
+          "rating": 77.226,
+          "n_players": 23
+        },
+        "Syria": {
+          "rating": 65.16,
+          "n_players": 2
+        },
+        "Tanzania": {
+          "rating": 74.0,
+          "n_players": 1
+        },
+        "Thailand": {
+          "rating": 57.745,
+          "n_players": 6
+        },
+        "Togo": {
+          "rating": 64.696,
+          "n_players": 11
+        },
+        "Trinidad and Tobago": {
+          "rating": 61.905,
+          "n_players": 8
+        },
+        "Tunisia": {
+          "rating": 67.69,
+          "n_players": 23
+        },
+        "Turkey": {
+          "rating": 75.696,
+          "n_players": 23
+        },
+        "Uganda": {
+          "rating": 64.031,
+          "n_players": 7
+        },
+        "Ukraine": {
+          "rating": 74.304,
+          "n_players": 23
+        },
+        "United Arab Emirates": {
+          "rating": 61.308,
+          "n_players": 19
+        },
+        "United States": {
+          "rating": 74.174,
+          "n_players": 23
+        },
+        "Uruguay": {
+          "rating": 77.697,
+          "n_players": 23
+        },
+        "Uzbekistan": {
+          "rating": 65.247,
+          "n_players": 6
+        },
+        "Venezuela": {
+          "rating": 72.739,
+          "n_players": 23
+        },
+        "Vietnam": {
+          "rating": 64.0,
+          "n_players": 1
+        },
+        "Wales": {
+          "rating": 72.32,
+          "n_players": 23
+        },
+        "Zambia": {
+          "rating": 62.516,
+          "n_players": 9
+        },
+        "Zimbabwe": {
+          "rating": 66.015,
+          "n_players": 13
+        }
+      }
+    }
+  }
+}
