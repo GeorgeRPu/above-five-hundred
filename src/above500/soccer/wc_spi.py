@@ -101,6 +101,12 @@ KO_BRACKET = {
     "Final": [("2026-07-19", "East Rutherford")],
 }
 
+# Host country of each knockout city; a host nation reaching a slot in its
+# own country plays it as a home match (every other knockout city is in the
+# United States)
+KO_HOST = {"Guadalupe": "Mexico", "Mexico City": "Mexico",
+           "Toronto": "Canada", "Vancouver": "Canada"}
+
 # martj42 sometimes lists a fixture under its metro area before settling on
 # the stadium's city once played (e.g. Portugal v Spain in "Dallas")
 KO_CITY_ALIASES = {
@@ -580,9 +586,12 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
         return (math.exp(bh + off[home] - dfn[away]),
                 math.exp(ba + off[away] - dfn[home]))
 
-    def advance(t1, t2, rng):
-        """Knockout: sample a neutral scoreline; resolve draws by win share."""
-        l1, l2 = xg(t1, t2, True)
+    def advance(t1, t2, rng, host=None):
+        """Knockout tie: sample a scoreline, host nations playing at home;
+        resolve draws by win share."""
+        if host == t2:
+            t1, t2 = t2, t1
+        l1, l2 = xg(t1, t2, t1 != host)
         g1, g2 = _poisson_sample(rng, l1), _poisson_sample(rng, l2)
         if g1 > g2:
             return t1
@@ -605,7 +614,7 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
     shootouts = run["shootouts"]
     if all(row is not None for row in ko["Round of 32"]):
 
-        def resolve(row, t1, t2, rng):
+        def resolve(row, t1, t2, rng, host):
             """Winner of a knockout tie: result, shootout record, or sample."""
             if row is not None and "home_goals" in row:
                 if row["home_goals"] != row["away_goals"]:
@@ -615,7 +624,10 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
                 if won in (row["home"], row["away"]):
                     return won
                 t1, t2 = row["home"], row["away"]  # drawn, shootout not recorded
-            return advance(t1, t2, rng)
+            return advance(t1, t2, rng, host)
+
+        def slot_host(label, i):
+            return KO_HOST.get(KO_BRACKET[label][i][1], "United States")
 
         for row in ko["Round of 32"]:
             tally[row["home"]]["r32"] = n_sims
@@ -623,8 +635,9 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
         stages = [("Round of 16", "qf"), ("Quarterfinal", "sf"),
                   ("Semifinal", "final"), ("Final", "title")]
         for _ in range(n_sims):
-            alive = [resolve(row, row["home"], row["away"], rng)
-                     for row in ko["Round of 32"]]
+            alive = [resolve(row, row["home"], row["away"], rng,
+                             slot_host("Round of 32", i))
+                     for i, row in enumerate(ko["Round of 32"])]
             for t in alive:
                 tally[t]["r16"] += 1
             for label, stage in stages:
@@ -632,7 +645,7 @@ def _simulate(run: dict, n_sims: int = N_SIMULATIONS) -> dict:
                 for i, row in enumerate(ko[label]):
                     t1, t2 = ((row["home"], row["away"]) if row is not None
                               else (alive[2 * i], alive[2 * i + 1]))
-                    winners.append(resolve(row, t1, t2, rng))
+                    winners.append(resolve(row, t1, t2, rng, slot_host(label, i)))
                 alive = winners
                 for t in alive:
                     tally[t][stage] += 1
@@ -821,7 +834,8 @@ def forecast() -> dict:
                        "Once the round of 32 is set, the simulation pins itself to the "
                        "real bracket instead: knockout results already played — including "
                        "penalty-shootout winners — are fixed, and only the remaining ties "
-                       "are simulated. "
+                       "are simulated, with host nations keeping home advantage in their "
+                       "own stadiums. "
                        + ("Following FiveThirtyEight, the ratings then blend 25% toward a "
                           "club-match roster prior — 538's own method. We rate club teams "
                           "with the same engine (from domestic leagues plus continental cups "
