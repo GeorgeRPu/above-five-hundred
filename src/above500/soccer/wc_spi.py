@@ -90,7 +90,7 @@ KO_BRACKET = {
         ("2026-07-04", "Philadelphia"), ("2026-07-04", "Houston"),
         ("2026-07-06", "Arlington"), ("2026-07-06", "Seattle"),
         ("2026-07-05", "East Rutherford"), ("2026-07-05", "Mexico City"),
-        ("2026-07-07", "Atlanta"), ("2026-07-07", "Vancouver"),
+        ("2026-07-06", "Atlanta"), ("2026-07-06", "Vancouver"),
     ],
     "Quarterfinal": [
         ("2026-07-09", "Foxborough"), ("2026-07-10", "Inglewood"),
